@@ -115,11 +115,22 @@ export class YouTubeAdapter implements MusicAdapter {
 
   private async playlistVideos(playlistId: string): Promise<Track[]> {
     const ids: string[] = [];
+    const seen = new Set<string>();
+    const tokens = new Set<string>();
     let pageToken: string | undefined;
     do {
       const res: any = await this.get("/playlistItems", { part: "contentDetails", playlistId, maxResults: 50, pageToken });
-      ids.push(...(res.items ?? []).map((i: any) => i.contentDetails?.videoId).filter(Boolean));
+      let added = 0;
+      for (const id of (res.items ?? []).map((i: any) => i.contentDetails?.videoId).filter(Boolean) as string[]) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        ids.push(id);
+        added++;
+      }
       pageToken = res.nextPageToken;
+      // Auto-generated YouTube Music playlists can hand back the same pages forever; stop when nothing new arrives.
+      if (!added || (pageToken && tokens.has(pageToken))) break;
+      if (pageToken) tokens.add(pageToken);
     } while (pageToken && ids.length < 1000);
     const details = await this.videos(ids);
     return ids.map((id) => videoToTrack(details.get(id))).filter((t): t is Track => t !== null);
