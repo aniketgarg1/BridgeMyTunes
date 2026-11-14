@@ -33,8 +33,18 @@ async function connectApple() {
   if (!mock) {
     const MusicKit = await loadMusicKit();
     await MusicKit.configure({ developerToken, app: { name: "TuneBridge", build: "0.1.0" } });
-    const musicUserToken: string = await MusicKit.getInstance().authorize();
-    if (!musicUserToken) throw new Error("Apple Music access was not granted");
+    const music = MusicKit.getInstance();
+    // Drop any cached login so the person can pick the Apple ID that has the subscription.
+    if (music.isAuthorized) await music.unauthorize().catch(() => {});
+    let musicUserToken: string | undefined;
+    try {
+      musicUserToken = await music.authorize();
+    } catch {
+      musicUserToken = undefined;
+    }
+    if (!musicUserToken) {
+      throw new Error("Apple Music sign-in didn't finish. Use an Apple ID with an active Apple Music subscription, then try again.");
+    }
     await api("/api/auth/apple/connect", { json: { musicUserToken } });
   } else {
     await api("/api/auth/apple/connect", { json: { mock: true } });
