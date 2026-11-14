@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+!.env.example
+
+# MusicKit private keys
+keys/
+*.p8
+
+# local tooling
+.claude/
