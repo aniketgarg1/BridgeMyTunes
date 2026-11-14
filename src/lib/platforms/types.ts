@@ -47,6 +47,12 @@ export async function fetchJson<T>(
     await sleep(Math.min(wait, 15_000));
     return fetchJson<T>(platform, url, init, attempt + 1);
   }
+  // Apple's catalog edge occasionally rejects a valid developer token with an empty 401. Retry it briefly.
+  const isGet = !init.method || init.method === "GET";
+  if (res.status === 401 && platform === "apple" && isGet && attempt < 3) {
+    await sleep(400 * (attempt + 1));
+    return fetchJson<T>(platform, url, init, attempt + 1);
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new PlatformError(
