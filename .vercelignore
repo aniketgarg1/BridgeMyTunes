@@ -1,0 +1,8 @@
+# Never upload secrets or local build output with CLI deploys
+.env*
+!.env.example
+keys/
+*.p8
+node_modules/
+.next/
+.claude/
