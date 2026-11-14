@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Onest, Outfit } from "next/font/google";
+import { Radio_Canada, Radio_Canada_Big } from "next/font/google";
 import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
 
-const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"], weight: ["300", "500"] });
-const onest = Onest({ variable: "--font-onest", subsets: ["latin"], weight: ["400", "500"] });
+const display = Radio_Canada_Big({ variable: "--font-rcbig", subsets: ["latin"], weight: ["400", "700"] });
+const body = Radio_Canada({ variable: "--font-rc", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
   title: "BridgeMyTunes: share music with anyone",
@@ -14,13 +14,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${outfit.variable} ${onest.variable}`}>
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body>
         <div className="shell">
           <header className="topbar">
             <div className="wrap topbar__inner">
               <Link href="/" className="wordmark">
-                bridgemytunes
+                BridgeMyTunes
               </Link>
               <Nav />
             </div>
@@ -30,8 +30,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </main>
           <footer className="footer">
             <div className="wrap footer__inner">
-              <Link href="/privacy">privacy</Link>
-              <Link href="/terms">terms</Link>
+              <span>BridgeMyTunes</span>
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/terms">Terms</Link>
             </div>
           </footer>
         </div>

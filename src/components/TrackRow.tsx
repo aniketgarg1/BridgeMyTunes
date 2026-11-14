@@ -15,14 +15,16 @@ export function Cover({ src, title, className = "thumb" }: { src?: string; title
 
 /** One song as a row: number, cover, title over artist, album, length. `side` replaces the length (chips, a score). */
 export function TrackRow({ track, index, side }: { track: Track; index?: number; side?: React.ReactNode }) {
+  // --i drives the one-time stagger on the shared page; it is capped there so long lists don't wait.
+  const style = index !== undefined ? ({ "--i": index } as React.CSSProperties) : undefined;
   return (
-    <div className="track">
+    <div className="track" style={style}>
       <span className="track__n">{index !== undefined ? index + 1 : ""}</span>
       <Cover src={track.artworkUrl} title={track.title} />
       <div className="track__main">
         <span className="track__title">
           {track.title}
-          {track.explicit && <span className="pill pill--tiny">explicit</span>}
+          {track.explicit && <span className="pill pill--tiny">Explicit</span>}
         </span>
         <span className="track__artist">{track.artists.join(", ")}</span>
       </div>

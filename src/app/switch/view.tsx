@@ -1,12 +1,56 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, useMe, useUrlError } from "@/components/api";
 import { ConnectButton, serviceName } from "@/components/ConnectButton";
+import { ServiceLogo } from "@/components/ServiceLogo";
 import { Cover } from "@/components/TrackRow";
 import { PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
 
 const LIKED = "__liked__";
+/** Where "all your saved songs" end up on each destination, in that app's own words. */
+const SAVED_TO: Record<Platform, string> = {
+  youtube: "Each song is liked, so it lands in Liked music on YouTube Music",
+  apple: "Each song is added to your Apple Music library",
+  spotify: "Each song is added to Liked Songs on Spotify",
+};
+
+/**
+ * The two ends trade places when the route is swapped: each end is measured before React moves it,
+ * then animated from its old spot to its new one (FLIP, transform only). Skipped for reduced motion.
+ */
+function useTradePlaces(order: string) {
+  const ends = useRef(new Map<string, HTMLElement>());
+  const before = useRef(new Map<string, DOMRect>());
+  const first = useRef(true);
+  const measure = () => {
+    before.current = new Map([...ends.current].map(([k, el]) => [k, el.getBoundingClientRect()]));
+  };
+  useLayoutEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    ends.current.forEach((el, k) => {
+      const was = before.current.get(k);
+      if (!was) return;
+      const now = el.getBoundingClientRect();
+      const dx = was.left - now.left;
+      const dy = was.top - now.top;
+      if (!dx && !dy) return;
+      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
+        duration: 460,
+        easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+      });
+    });
+  }, [order]);
+  const ref = (k: string) => (el: HTMLElement | null) => {
+    if (el) ends.current.set(k, el);
+    else ends.current.delete(k);
+  };
+  return { ref, measure };
+}
 
 export function SwitchView({ initialError }: { initialError: string | null }) {
   const router = useRouter();
@@ -17,6 +61,8 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   const [loaded, setLoaded] = useState<{ platform: Platform; list: PlaylistSummary[] } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [turns, setTurns] = useState(0);
+  const trade = useTradePlaces(from);
 
   const fromOk = Boolean(me?.connections[from]);
   const toOk = Boolean(me?.connections[to]);
@@ -34,6 +80,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
 
   const playlists = loaded?.platform === from ? loaded.list : null;
   const readable = playlists?.filter((p) => p.readable) ?? [];
+  const allSelected = selected.size === readable.length + 1;
   const toggle = (id: string) =>
     setSelected((s) => {
       const n = new Set(s);
@@ -55,11 +102,18 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
     }
   };
 
+  const swap = () => {
+    trade.measure();
+    setTurns((n) => n + 1);
+    setFrom(to);
+    setSelected(new Set());
+  };
+
   return (
     <div className="switch">
-      <section className="transfer__head">
-        <h1 className="title">move your music</h1>
-        <p className="sub">Copy playlists and liked songs from one service to the other. Nothing is removed from where they are now.</p>
+      <section className="move-head">
+        <h1 className="move-title">Move your music</h1>
+        <p className="sub">Copy playlists and liked songs from one app to the other. Nothing is removed from where it is now.</p>
       </section>
 
       {error && (
@@ -68,52 +122,64 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
         </p>
       )}
 
-      <div className="route">
+      <section className="route" aria-label="Route">
         {[from, to].map((p, i) => (
-          <div key={p} className={`route__end ${i === 0 ? "route__end--from" : "route__end--to"}`}>
-            <span className="label">{i === 0 ? "from" : "to"}</span>
-            <span className="route__name">{serviceName(p)}</span>
-            <ConnectButton platform={p} connected={Boolean(me?.connections[p])} onConnected={refresh} />
+          <div key={p} ref={trade.ref(p)} className={`route__end ${i === 0 ? "route__end--from" : "route__end--to"}`}>
+            <span className="route__label">{i === 0 ? "From" : "To"}</span>
+            <span className="route__name">
+              <ServiceLogo platform={p} size={48} />
+              <span>{serviceName(p)}</span>
+            </span>
+            {me ? (
+              <ConnectButton platform={p} connected={Boolean(me.connections[p])} onConnected={refresh} />
+            ) : (
+              <span className="route__wait label">Checking…</span>
+            )}
           </div>
         ))}
-        <button
-          onClick={() => {
-            setFrom(to);
-            setSelected(new Set());
-          }}
-          aria-label="Swap direction"
-          className="btn route__swap"
-        >
-          swap
+        <button type="button" onClick={swap} aria-label={`Swap: move from ${serviceName(to)} to ${serviceName(from)}`} className="btn route__swap">
+          <span className="route__arrows" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" style={{ transform: `rotate(${turns * 180}deg)` }}>
+              <path d="M16 3l5 5-5 5-1.4-1.4L17.2 9H4V7h13.2l-2.6-2.6zM8 11l1.4 1.4L6.8 15H20v2H6.8l2.6 2.6L8 21l-5-5z" />
+            </svg>
+          </span>
+          <span>Swap</span>
         </button>
-      </div>
+      </section>
+
+      {me && !fromOk && <p className="label">Connect {serviceName(from)} to see your playlists.</p>}
 
       {fromOk && (
-        <section className="panel" aria-labelledby="pick-title">
-          <div className="library__head">
-            <h2 id="pick-title">choose what to move</h2>
+        <section className="pick" aria-labelledby="pick-title">
+          <div className="pick__head">
+            <h2 id="pick-title">Choose what to move</h2>
             {playlists && (
               <button
+                type="button"
                 className="btn btn--quiet"
-                onClick={() => setSelected(selected.size === readable.length + 1 ? new Set() : new Set([LIKED, ...readable.map((p) => p.id)]))}
+                onClick={() => setSelected(allSelected ? new Set() : new Set([LIKED, ...readable.map((p) => p.id)]))}
               >
-                {selected.size === readable.length + 1 ? "clear" : "select all"}
+                {allSelected ? "Clear" : "Select all"}
               </button>
             )}
           </div>
           {!playlists ? (
             <p className="label" role="status">
-              loading your library…
+              Loading your library…
             </p>
           ) : (
-            <ul className="picker" role="list">
+            <ul className="picker rows" role="list">
               <li>
                 <label className="picker__row">
                   <input type="checkbox" checked={selected.has(LIKED)} onChange={() => toggle(LIKED)} className="check" />
-                  <Cover title="liked" />
+                  <span className="thumb thumb--icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                      <path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.1 0 3.6 1.2 4.2 2.4h2c.6-1.2 2.1-2.4 4.2-2.4 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z" />
+                    </svg>
+                  </span>
                   <span className="track__main">
-                    <span className="track__title">{from === "apple" ? "Library songs" : "Liked songs"}</span>
-                    <span className="track__artist">saved to your {serviceName(to)} library</span>
+                    <span className="track__title">{from === "apple" ? "All library songs" : "All liked songs"}</span>
+                    <span className="track__artist">{SAVED_TO[to]}</span>
                   </span>
                 </label>
               </li>
@@ -125,7 +191,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
                     <span className="track__main">
                       <span className="track__title">{p.name}</span>
                       <span className="track__artist">
-                        {p.readable ? (p.trackCount !== undefined ? `${p.trackCount} songs` : "playlist") : "not yours, can't be read"}
+                        {p.readable ? (p.trackCount !== undefined ? `${p.trackCount} songs` : "Playlist") : "Not yours, can't be read"}
                       </span>
                     </span>
                   </label>
@@ -134,12 +200,18 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
             </ul>
           )}
           <div className="picker__actions">
-            <button disabled={!toOk || busy || !playlists} onClick={() => run([LIKED, ...readable.map((p) => p.id)])} className="btn">
-              move everything
+            <button
+              type="button"
+              disabled={!toOk || busy || selected.size === 0}
+              onClick={() => run([...selected])}
+              className="btn btn--primary btn--lg"
+            >
+              {busy ? "Starting…" : selected.size ? `Move ${selected.size} to ${serviceName(to)}` : "Move selected"}
             </button>
-            <button disabled={!toOk || busy || selected.size === 0} onClick={() => run([...selected])} className="btn btn--primary">
-              {busy ? "starting…" : selected.size ? `move ${selected.size} selected` : "move selected"}
+            <button type="button" disabled={!toOk || busy || !playlists} onClick={() => run([LIKED, ...readable.map((p) => p.id)])} className="btn btn--quiet">
+              Move everything
             </button>
+            {!toOk && me && <span className="label">Connect {serviceName(to)} first.</span>}
           </div>
         </section>
       )}

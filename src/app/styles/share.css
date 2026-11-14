@@ -1,0 +1,86 @@
+/* Hallmark · shape: app screen · genre: editorial · theme: Grid · partial: share pages, imported by globals.css */
+/* Shared link pages: a song (the ledger) or a collection (the app switch and track list). Owned by p/[slug]/view.tsx and TrackRow.tsx. */
+/* Grid: the cover hangs from column 1 to 4, the head and everything under it from column 6 to 12. Hairlines only between rows. */
+
+/* ---------- share pages ---------- */
+.share { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--space-lg); align-items: start; padding-block: var(--space-xl) var(--space-2xl); }
+.share__art { grid-column: 1 / 5; position: sticky; top: var(--space-xl); }
+.share__art .cover { display: block; animation: share-settle 700ms var(--ease-out) backwards; }
+.share__head { grid-column: 6 / 13; display: grid; gap: var(--space-lg); align-content: start; min-width: 0; }
+.title--share { font-size: clamp(2.4rem, 5vw, 4.2rem); line-height: 1; max-width: 16ch; }
+.share__meta { margin-top: calc(-1 * var(--space-xs)); color: var(--color-muted); font-size: var(--text-md); line-height: 1.5; max-width: 52ch; }
+
+/* the app switch and the one action it chooses */
+.share__open { display: grid; gap: var(--space-sm); margin-block: var(--space-md) var(--space-xs); }
+.share__go { display: flex; flex-wrap: wrap; align-items: start; gap: var(--space-xs) var(--space-lg); margin-top: var(--space-xs); }
+.share__action { display: flex; animation: share-swap var(--dur-short) var(--ease-out) backwards; }
+.share__action .btn { min-height: var(--control-h-lg); padding-inline: var(--space-lg); font-size: var(--text-md); gap: var(--space-sm); }
+.share__connect { display: inline-grid; }
+.share__source { padding-inline: 0; }
+
+/* copy link: a field over a hairline, the button beside it */
+.copy { display: flex; align-items: end; gap: var(--space-sm); max-width: 36rem; }
+.copy .field { min-height: var(--control-h-lg); padding-inline: 0; background: transparent; font-size: var(--text-md); }
+
+/* the song ledger */
+.ledger { display: grid; margin-top: var(--space-md); border-top: var(--rule-hair) solid var(--color-rule); }
+.ledger__row { display: grid; grid-template-columns: 13rem minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; min-height: 80px; padding-block: var(--space-md); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.ledger__service { display: inline-flex; align-items: center; gap: var(--space-sm); font: 700 var(--text-lg)/1.1 var(--font-display); letter-spacing: -0.02em; transition: color var(--dur-short) var(--ease-out); }
+.ledger__service .logo { transition: transform var(--dur-short) var(--ease-out); }
+.ledger__row:hover .ledger__service { color: var(--color-mark); }
+.ledger__row:hover .ledger__service .logo { transform: scale(1.08); }
+.ledger__found { display: grid; gap: var(--space-3xs); min-width: 0; }
+.ledger__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ledger__open { min-width: 5.5rem; }
+.ledger__row:has(.ledger__open:focus-visible) .ledger__service { color: var(--color-mark); }
+.ledger__row:has(.ledger__open:active) .ledger__service { color: var(--color-mark-deep); }
+.share__source:focus-visible { outline-offset: 4px; }
+.share__source:active { color: var(--color-mark-deep); }
+
+/* track rows (shared with the transfer screens; the stagger is scoped to the share page) */
+.tracks { display: grid; margin-top: var(--space-xl); border-top: var(--rule-hair) solid var(--color-rule); }
+.share__tracks { margin-top: var(--space-lg); }
+.track { display: grid; grid-template-columns: 2.25rem var(--cover-sm) minmax(0, 2fr) minmax(0, 1fr) minmax(3rem, auto); gap: var(--space-md); align-items: center; padding-block: var(--space-sm); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.track__n { font: 700 var(--text-lg)/1 var(--font-display); letter-spacing: -0.02em; color: var(--color-ink); font-variant-numeric: tabular-nums; transition: color var(--dur-short) var(--ease-out); }
+.track:hover .track__n { color: var(--color-mark); }
+.track__time { font-size: var(--text-sm); color: var(--color-muted); font-variant-numeric: tabular-nums; text-align: right; }
+.track__main { display: grid; gap: var(--space-3xs); min-width: 0; }
+.track__title { font-weight: 500; }
+.track__title, .track__artist, .track__album { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track__artist, .track__album { color: var(--color-muted); font-size: var(--text-sm); }
+.tracks--album .track { grid-template-columns: 2.25rem var(--cover-sm) minmax(0, 1fr) minmax(3rem, auto); }
+.tracks--album .track__album { display: none; }
+.pill--tiny { min-height: auto; padding: var(--space-3xs) var(--space-xs); margin-left: var(--space-xs); vertical-align: middle; font-size: var(--text-xs); color: var(--color-muted); }
+.track__side { display: flex; justify-content: flex-end; gap: var(--space-2xs); flex-wrap: wrap; }
+/* rows come in once, in order; past the twelfth they all arrive together */
+.share__tracks .track { animation: share-row var(--dur-long) var(--ease-out) backwards; animation-delay: calc(min(var(--i, 0), 12) * 40ms + 120ms); }
+
+.share-empty { display: grid; justify-items: start; gap: var(--space-md); padding-block: var(--space-2xl); }
+
+@keyframes share-settle { from { opacity: 0; transform: translateY(12px) scale(0.985); } }
+@keyframes share-swap { from { opacity: 0; transform: translateY(6px); } }
+@keyframes share-row { from { opacity: 0; transform: translateX(-12px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .share__art .cover, .share__action, .share__tracks .track { animation: none; }
+  .ledger__row:hover .ledger__service .logo { transform: none; }
+}
+
+@media (max-width: 54rem) {
+  .share { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-xl); padding-block: var(--space-md) var(--space-xl); }
+  .share__art, .share__head { grid-column: 1 / -1; }
+  .share__art { position: static; max-width: 280px; }
+  .ledger__row { grid-template-columns: 11rem minmax(0, 1fr) auto; }
+  .track { grid-template-columns: 2.25rem var(--cover-sm) minmax(0, 1fr) minmax(3rem, auto); }
+  .track__album { display: none; }
+}
+@media (max-width: 40rem) {
+  .title--share { font-size: var(--text-4xl); }
+  .share__go { flex-direction: column; align-items: stretch; }
+  .share__action, .share__connect, .share__connect .connect, .share__action .btn { width: 100%; }
+  .share__source { justify-content: flex-start; }
+  .copy { flex-direction: column; align-items: stretch; }
+  .ledger__row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-xs); }
+  .ledger__found { grid-column: 1 / -1; grid-row: 2; }
+  .track { grid-template-columns: 1.75rem var(--cover-sm) minmax(0, 1fr) auto; gap: var(--space-sm); }
+}

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MatchResult, Platform, Track, TransferSource, TransferStatus } from "@/lib/types";
 import { api } from "./api";
 import { serviceName } from "./ConnectButton";
+import { ServiceLogo } from "./ServiceLogo";
 import { Cover, TrackRow } from "./TrackRow";
 
 export interface TransferData {
@@ -22,24 +23,42 @@ export interface TransferData {
 }
 
 const STATUS_LABEL: Record<TransferStatus, string> = {
-  queued: "waiting to start",
-  reading: "reading the songs",
-  matching: "matching songs",
-  writing: "making the playlist",
-  done: "done",
-  failed: "stopped",
+  queued: "Waiting to start",
+  reading: "Reading the songs",
+  matching: "Matching songs",
+  writing: "Making the playlist",
+  done: "Done",
+  failed: "Stopped",
 };
 
 const METHOD_LABEL: Record<MatchResult["method"], string> = {
-  cache: "known match",
-  isrc: "isrc",
-  metadata: "metadata",
-  ai: "gemini",
-  manual: "you picked",
-  none: "no match",
+  cache: "Known match",
+  isrc: "ISRC",
+  metadata: "Metadata",
+  ai: "Gemini",
+  manual: "You picked",
+  none: "No match",
 };
 
-const flagText = (f: string) => f.toLowerCase();
+/** Flags already arrive in sentence case ("Unofficial upload"); only the first letter is made sure of. */
+const flagText = (f: string) => f.charAt(0).toUpperCase() + f.slice(1);
+
+/** A figure that swaps in place when its value changes (remounted by key, opacity and transform only). */
+function Figure({ value, label, big = false }: { value: number; label: string; big?: boolean }) {
+  return (
+    <div className={`stat${big ? " stat--big" : ""}`}>
+      <span className="stat__n" aria-hidden="true">
+        <span key={value} className="stat__v">
+          {value}
+        </span>
+      </span>
+      <span className="stat__label">
+        <span className="visually-hidden">{value} </span>
+        {label}
+      </span>
+    </div>
+  );
+}
 
 function ReviewItem({
   r,
@@ -69,57 +88,61 @@ function ReviewItem({
 
   return (
     <li className="review__item">
-      <div className="review__flags">
-        <span className="pill pill--accent">{r.status === "uncertain" ? "not sure" : "not found"}</span>
-        {r.flags.map((f) => (
-          <span key={f} className="pill">
-            {flagText(f)}
-          </span>
-        ))}
-      </div>
-      <TrackRow track={r.source} />
-      {r.aiReason && <p className="label">Gemini: {r.aiReason}</p>}
-
-      <fieldset className="choices">
-        <legend className="label">
-          {results ? "search results" : options.length ? `closest on ${serviceName(destination)}` : `nothing close on ${serviceName(destination)}`}
-        </legend>
-        {options.map((c, i) => (
-          <label key={`${Object.values(c.ids).join()}-${i}`} className="choice">
-            <input type="radio" name={`pick-${r.index}`} checked={choice === i} onChange={() => setChoice(i)} className="check" />
-            <Cover src={c.artworkUrl} title={c.title} />
-            <span className="track__main">
-              <span className="track__title">{c.title}</span>
-              <span className="track__artist">{c.artists.join(", ")}</span>
+      <div className="review__source">
+        <div className="review__flags">
+          <span className="pill pill--accent">{r.status === "uncertain" ? "Not sure" : "Not found"}</span>
+          {r.flags.map((f) => (
+            <span key={f} className="pill">
+              {flagText(f)}
             </span>
-            <span className="track__time">{"score" in c ? `${Math.round((c as { score: number }).score * 100)}%` : ""}</span>
+          ))}
+        </div>
+        <TrackRow track={r.source} />
+        {r.aiReason && <p className="label">Gemini: {r.aiReason}</p>}
+      </div>
+
+      <div className="review__pick">
+        <fieldset className="choices">
+          <legend className="label">
+            {results ? "Search results" : options.length ? `Closest on ${serviceName(destination)}` : `Nothing close on ${serviceName(destination)}`}
+          </legend>
+          {options.map((c, i) => (
+            <label key={`${Object.values(c.ids).join()}-${i}`} className="choice">
+              <input type="radio" name={`pick-${r.index}`} checked={choice === i} onChange={() => setChoice(i)} className="check" />
+              <Cover src={c.artworkUrl} title={c.title} />
+              <span className="track__main">
+                <span className="track__title">{c.title}</span>
+                <span className="track__artist">{c.artists.join(", ")}</span>
+              </span>
+              <span className="track__time">{"score" in c ? `${Math.round((c as { score: number }).score * 100)}%` : ""}</span>
+            </label>
+          ))}
+        </fieldset>
+
+        <form
+          className="review__search"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const { tracks } = await api<{ tracks: Track[] }>(`/api/search?platform=${destination}&q=${encodeURIComponent(query)}`);
+            setResults(tracks);
+            setChoice(tracks.length ? 0 : -1);
+          }}
+        >
+          <label htmlFor={searchId} className="visually-hidden">
+            Search for a replacement
           </label>
-        ))}
-      </fieldset>
+          <input id={searchId} value={query} onChange={(e) => setQuery(e.target.value)} className="field" aria-label="Search for a replacement" />
+          <button className="btn">Search</button>
+        </form>
 
-      <form
-        className="review__search"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const { tracks } = await api<{ tracks: Track[] }>(`/api/search?platform=${destination}&q=${encodeURIComponent(query)}`);
-          setResults(tracks);
-          setChoice(tracks.length ? 0 : -1);
-        }}
-      >
-        <label htmlFor={searchId} className="visually-hidden">
-          Search for a replacement
-        </label>
-        <input id={searchId} value={query} onChange={(e) => setQuery(e.target.value)} className="field" aria-label="Search for a replacement" />
-        <button className="btn">search</button>
-      </form>
-
-      <div className="review__actions">
-        <button disabled={busy} onClick={() => decide(null)} className="btn btn--quiet">
-          skip
-        </button>
-        <button disabled={busy || choice < 0} onClick={() => decide(options[choice])} className="btn btn--primary">
-          {busy ? "adding…" : "add this song"}
-        </button>
+        <div className="review__actions">
+          <button disabled={busy || choice < 0} onClick={() => decide(options[choice])} className="btn btn--primary">
+            {busy ? "Adding…" : "Add this song"}
+          </button>
+          <button disabled={busy} onClick={() => decide(null)} className="btn btn--quiet">
+            Skip
+          </button>
+        </div>
       </div>
     </li>
   );
@@ -179,7 +202,7 @@ export function TransferView({ id }: { id: string }) {
   if (!t) {
     return (
       <p className="label" role="status">
-        loading…
+        Loading…
       </p>
     );
   }
@@ -191,42 +214,46 @@ export function TransferView({ id }: { id: string }) {
 
   return (
     <div className="transfer">
-      <section className="transfer__head">
-        <h1 className="title title--content">{t.sourceName ?? "getting ready…"}</h1>
-        <p className="sub">
-          {t.source.type === "universal" ? "From a shared link" : `From ${serviceName(t.source.platform)}`} to {dest}
+      <section className="move-head">
+        <h1 className="move-title move-title--content">{t.sourceName ?? "Getting ready…"}</h1>
+        <p className="sub route-line">
+          <span>{t.source.type === "universal" ? "From a shared link" : `From ${serviceName(t.source.platform)}`} to</span>
+          <span className="dest">
+            <ServiceLogo platform={t.destination} size={20} />
+            {dest}
+          </span>
         </p>
       </section>
 
-      <section className="panel" aria-label="Progress">
-        <div className="library__head">
-          <span className="label" role="status">
-            {STATUS_LABEL[t.status]}
-            {running ? "…" : ""}
-          </span>
-          <span className="track__time">
-            {t.processed} of {t.total || "?"}
-          </span>
-        </div>
-        <div className={`progress${t.status === "failed" ? " progress--failed" : ""}`} role="progressbar" aria-valuenow={Math.round(share * 100)} aria-valuemin={0} aria-valuemax={100}>
-          <div className="progress__bar" style={{ transform: `scaleX(${share})` }} />
-        </div>
+      <section className="run" aria-label="Progress">
         <div className="figures">
-          <div>
-            <span className="figure">{groups.matched.length}</span>
-            <span className="label">matched</span>
+          <Figure value={groups.matched.length} label="Matched" big />
+          <Figure value={groups.uncertain.length} label="To review" />
+          <Figure value={groups.unavailable.length} label={`Not on ${dest}`} />
+        </div>
+        <div className="run__meter">
+          <div className="run__status">
+            <span role="status">
+              {STATUS_LABEL[t.status]}
+              {running ? "…" : ""}
+            </span>
+            <span className="run__count">
+              {t.processed} of {t.total || "?"}
+            </span>
           </div>
-          <div>
-            <span className="figure">{groups.uncertain.length}</span>
-            <span className="label">to review</span>
-          </div>
-          <div>
-            <span className="figure">{groups.unavailable.length}</span>
-            <span className="label">not on {dest}</span>
+          <div
+            className={`progress${t.status === "failed" ? " progress--failed" : ""}${running && !t.total ? " progress--waiting" : ""}`}
+            role="progressbar"
+            aria-label="Songs processed"
+            aria-valuenow={Math.round(share * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div className="progress__bar" style={{ transform: `scaleX(${share})` }} />
           </div>
         </div>
         {t.status === "failed" && (
-          <div className="panel__foot">
+          <div className="run__foot">
             <p className="notice" role="alert">
               {t.error}
             </p>
@@ -243,14 +270,14 @@ export function TransferView({ id }: { id: string }) {
                   setRetrying(false);
                 }
               }}
-              className="btn btn--primary"
+              className="btn btn--primary btn--lg"
             >
-              {retrying ? "starting…" : "try again"}
+              {retrying ? "Starting…" : "Try again"}
             </button>
           </div>
         )}
         {t.status === "done" && (
-          <div className="panel__foot">
+          <div className="run__foot">
             <p>
               {t.via === "house"
                 ? `Your Spotify playlist is ready with ${added} songs. Open it and tap the plus to save it to your library.`
@@ -260,8 +287,9 @@ export function TransferView({ id }: { id: string }) {
               {t.timings?.totalMs ? <span className="label"> Took {(t.timings.totalMs / 1000).toFixed(1)}s.</span> : null}
             </p>
             {t.destUrl && (
-              <a href={t.destUrl} target="_blank" rel="noreferrer" className="btn btn--primary">
-                open in {dest}
+              <a href={t.destUrl} target="_blank" rel="noreferrer" className="btn btn--primary btn--lg">
+                <ServiceLogo platform={t.destination} size={20} />
+                Open in {dest}
               </a>
             )}
           </div>
@@ -269,13 +297,13 @@ export function TransferView({ id }: { id: string }) {
       </section>
 
       {t.results.length > 0 && (
-        <section className="review">
-          <div className="library__head">
+        <section className="results">
+          <div className="results__head">
             <div className="tabs" role="tablist" aria-label="Results">
               {(
                 [
-                  ["review", `needs review (${groups.review.length})`],
-                  ["matched", `matched (${groups.matched.length})`],
+                  ["review", `Needs review (${groups.review.length})`],
+                  ["matched", `Matched (${groups.matched.length})`],
                 ] as const
               ).map(([k, label]) => (
                 <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className="tab">
@@ -296,29 +324,29 @@ export function TransferView({ id }: { id: string }) {
                 }}
                 className="btn"
               >
-                {bulkBusy ? "adding…" : groups.uncertain.length === 1 ? "accept suggestion" : `accept all ${groups.uncertain.length}`}
+                {bulkBusy ? "Adding…" : groups.uncertain.length === 1 ? "Accept suggestion" : `Accept all ${groups.uncertain.length}`}
               </button>
             )}
           </div>
 
           {tab === "review" ? (
             groups.review.length === 0 ? (
-              <p className="empty">{running ? "Songs that need a look will show up here." : "Nothing left to review."}</p>
+              <p className="results__empty">{running ? "Songs that need a look will show up here." : "Nothing left to review."}</p>
             ) : t.status !== "done" ? (
-              <p className="empty">
+              <p className="results__empty">
                 {t.status === "failed"
                   ? "Fix the problem above and try again to review these."
                   : `${groups.review.length} ${groups.review.length === 1 ? "song needs" : "songs need"} a look once matching finishes.`}
               </p>
             ) : (
-              <ul className="review" role="list">
+              <ul className="review rows" role="list">
                 {groups.review.map((r) => (
                   <ReviewItem key={r.index} r={r} destination={t.destination} onDecide={(track) => resolve([{ index: r.index, track }])} />
                 ))}
               </ul>
             )
           ) : (
-            <div className="tracks">
+            <div className="tracks rows">
               {groups.matched.map((r) => (
                 <TrackRow
                   key={r.index}

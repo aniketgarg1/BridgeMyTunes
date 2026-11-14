@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { serviceName } from "@/components/ConnectButton";
+import { ServiceLogo } from "@/components/ServiceLogo";
 import type { Platform, TransferSource, TransferStatus } from "@/lib/types";
 
 interface Summary {
@@ -32,34 +33,36 @@ export default function TransfersPage() {
 
   return (
     <div className="transfer">
-      <h1 className="title">your transfers</h1>
+      <h1 className="move-title">Your transfers</h1>
       {!list ? (
         <p className="label" role="status">
-          loading…
+          Loading…
         </p>
       ) : list.length === 0 ? (
-        <div className="empty">
+        <div className="move-empty">
           <p>Nothing moved yet. Open a shared link and add it to your app, or move your own playlists.</p>
-          <Link href="/switch" className="btn btn--primary">
-            move your music
+          <Link href="/switch" className="btn btn--primary btn--lg">
+            Move your music
           </Link>
         </div>
       ) : (
-        <ul className="list" role="list">
+        <ul className="list rows" role="list">
           {list.map((t) => {
             const pct = t.total ? Math.round((t.processed / t.total) * 100) : 0;
             const from = t.source.type === "universal" ? "a shared link" : serviceName(t.source.platform);
+            const when = new Date(t.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
             return (
               <li key={t.id}>
                 <Link href={`/transfers/${t.id}`} className="list__row">
+                  <ServiceLogo platform={t.destination} size={32} />
                   <span className="track__main">
-                    <span className="list__name">{t.sourceName ?? "getting ready…"}</span>
+                    <span className="list__name">{t.sourceName ?? "Getting ready…"}</span>
                     <span className="track__artist">
-                      from {from} to {serviceName(t.destination)}, {new Date(t.createdAt).toLocaleString()}
+                      From {from} to {serviceName(t.destination)}, {when}
                     </span>
                   </span>
                   <span className={`pill${t.status === "done" ? " pill--accent" : ""}`}>
-                    {t.status === "done" ? "done" : t.status === "failed" ? "stopped" : `${pct}%`}
+                    {t.status === "done" ? "Done" : t.status === "failed" ? "Stopped" : `${pct}%`}
                   </span>
                 </Link>
               </li>

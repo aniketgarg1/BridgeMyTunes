@@ -1,0 +1,109 @@
+/* Hallmark · shape: app screen · genre: editorial · theme: Grid (by request: mockup C) · redesign: full · hero: poster · nav: shared topbar · footer: shared footer · signature: the ultramarine field holding the paste control · posture: full-palette · motion by request: field wipe, rise, tile stagger */
+/* Home: paste a link, or pick from your library. Owned by share/view.tsx. */
+
+.home { display: grid; gap: var(--space-3xl); }
+
+/* ---------- hero: poster head on columns 1-6, the field from column 7 to the bleed ---------- */
+.hero {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--space-lg);
+  min-height: clamp(480px, calc(100svh - 200px), 640px);
+  margin-top: calc(-1 * var(--space-xl));
+}
+.hero__head { grid-column: 1 / 7; padding-block: var(--space-3xl) var(--space-2xl); }
+.hero__head h1 {
+  max-width: none; font-size: clamp(3.5rem, 6vw, 5.25rem); line-height: 0.9; letter-spacing: -0.045em; text-wrap: balance;
+}
+.hero__sub { margin-top: var(--space-lg); max-width: 30ch; font-size: var(--text-lg); line-height: 1.45; color: var(--color-ink-2); }
+
+.hero__field {
+  --bleed: calc(var(--gutter) + max(0px, (100vw - var(--measure-app)) / 2));
+  --color-focus: var(--color-field-ink);
+  grid-column: 7 / 13; position: relative; isolation: isolate; display: flex; flex-direction: column; min-width: 0;
+  margin-right: calc(-1 * var(--bleed));
+  padding: var(--space-3xl) calc(var(--space-xl) + var(--bleed)) var(--space-2xl) var(--space-xl);
+  background: var(--color-field); color: var(--color-field-ink);
+}
+/* the wipe: a paper sheet over the field shrinks to the right, so the ultramarine runs in from the left */
+.hero__field::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--color-paper);
+  transform: scaleX(0); transform-origin: right center; animation: home-wipe 900ms var(--ease-out) both;
+}
+.hero__field > :not(.paste__error) { animation: home-rise 600ms var(--ease-out) 450ms both; }
+@keyframes home-wipe { from { transform: scaleX(1); } }
+@keyframes home-rise { from { opacity: 0; transform: translateY(12px); } }
+
+/* the paste control: type over a field-ink hairline, the ink button */
+.paste { display: grid; gap: var(--space-lg); }
+.paste__label { font: 500 var(--text-sm)/1 var(--font-body); color: var(--color-field-soft); }
+.paste .paste__input {
+  padding-inline: 0; background: transparent; color: var(--color-field-ink); font-size: var(--text-xl);
+  border-bottom: 1px solid var(--color-field-soft); box-shadow: none;
+  transition: border-color var(--dur-short) var(--ease-out);
+}
+.paste .paste__input::placeholder { color: var(--color-field-soft); }
+.paste .paste__input:hover { border-bottom-color: var(--color-field-ink); box-shadow: inset 0 -1px 0 var(--color-field-ink); }
+.paste .paste__input:focus-visible { border-bottom-color: var(--color-field-ink); box-shadow: inset 0 -1px 0 var(--color-field-ink); outline-color: var(--color-field-ink); }
+.paste__list { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-md); align-items: center; }
+.paste__count { font: 700 var(--text-md)/1 var(--font-display); white-space: nowrap; }
+.paste__list .paste__input { flex: 1 1 14rem; font-size: var(--text-md); }
+.paste__go { justify-self: start; }
+.paste__error {
+  margin-top: var(--space-lg); padding: var(--space-sm) var(--space-md); max-width: 52ch;
+  background: var(--color-paper); color: var(--color-error); font: 500 var(--text-sm)/1.4 var(--font-body);
+  animation: home-rise var(--dur-short) var(--ease-out) both;
+}
+
+/* the three apps at the foot of the field */
+.apps { list-style: none; margin: auto 0 0; padding: var(--space-2xl) 0 0; display: grid; gap: var(--space-sm); }
+.apps__item {
+  display: flex; align-items: center; gap: var(--space-md);
+  font: 700 var(--text-2xl)/1 var(--font-display); letter-spacing: -0.03em; white-space: nowrap;
+}
+.apps__logo { display: grid; place-items: center; flex: none; width: var(--hit); height: var(--hit); background: var(--color-field-ink); }
+
+/* ---------- library ---------- */
+.library { display: grid; gap: var(--space-lg); }
+.library__head { display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center; justify-content: space-between; }
+.library__head h2 { font-size: var(--text-2xl); }
+.home .library__head h2 { font-size: clamp(2rem, 3.6vw, 3rem); line-height: 1; }
+.home .tab { display: inline-flex; align-items: center; gap: var(--space-xs); }
+
+.shelf { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr)); gap: var(--space-xl) var(--space-lg); }
+.shelf__item { animation: home-rise 500ms var(--ease-out) calc(var(--i, 0) * 50ms) both; }
+.tile { display: grid; gap: var(--space-xs); width: 100%; padding: 0; border: 0; border-radius: 0; background: none; text-align: left; color: inherit; cursor: pointer; }
+.tile__art { display: block; overflow: hidden; background: var(--color-paper-2); }
+.tile__art .cover { display: block; transition: transform var(--dur-long) var(--ease-out); }
+.tile__name { margin-top: var(--space-2xs); font: 700 var(--text-md)/1.2 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; transition: color var(--dur-short) var(--ease-out); }
+@media (hover: hover) {
+  .tile:hover:not(:disabled) .cover { transform: scale(1.04); }
+  .tile:hover:not(:disabled) .tile__name { color: var(--color-mark); }
+}
+.tile:active:not(:disabled) .cover { transform: scale(1.01); transition-duration: var(--dur-micro); }
+.tile:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
+.tile:disabled { cursor: not-allowed; opacity: 0.45; }
+
+/* shared well, also used by transfers, switch and the playlist page */
+.empty { display: grid; justify-items: start; gap: var(--space-md); padding: var(--space-xl); border-radius: var(--radius-card); background: var(--color-paper-2); }
+
+/* ---------- smaller screens: the field goes full width under the head ---------- */
+@media (max-width: 54rem) {
+  .hero { grid-template-columns: minmax(0, 1fr); min-height: 0; margin-top: 0; }
+  .hero__head, .hero__field { grid-column: 1 / -1; }
+  .hero__head { padding-block: var(--space-lg) var(--space-xl); }
+  .hero__field { margin-inline: calc(-1 * var(--gutter)); padding: var(--space-xl) var(--gutter); }
+  .apps { padding-top: var(--space-xl); }
+  .apps__item { font-size: var(--text-xl); }
+}
+@media (max-width: 40rem) {
+  .paste .paste__input { font-size: var(--text-lg); }
+  .paste__go { justify-self: stretch; }
+  .home .tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; }
+  .home .tab { flex-direction: column; justify-content: center; gap: var(--space-2xs); padding: var(--space-xs); font-size: var(--text-xs); text-align: center; }
+  .empty { padding: var(--space-lg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__field::before, .hero__field > *, .shelf__item { animation: none; }
+  .tile__art .cover { transition: none; }
+  .tile:hover .cover, .tile:active .cover { transform: none; }
+}

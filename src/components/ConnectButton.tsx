@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORM_LABEL, type Platform } from "@/lib/types";
 import { api } from "./api";
+import { ServiceLogo } from "./ServiceLogo";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -51,8 +52,8 @@ async function connectApple() {
   }
 }
 
-/** Lowercase service name for interface text (the theme sets controls in lowercase). */
-export const serviceName = (p: Platform) => PLATFORM_LABEL[p].toLowerCase();
+/** The service's proper name for interface text ("YouTube Music"). */
+export const serviceName = (p: Platform) => PLATFORM_LABEL[p];
 
 export function ConnectButton({
   platform,
@@ -89,25 +90,35 @@ export function ConnectButton({
   };
 
   if (connected) {
-    return <span className="pill pill--accent">{serviceName(platform)} connected</span>;
+    return (
+      <span className="pill pill--accent connected">
+        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+          <path d="M6.2 11.6 2.6 8l1.1-1.1 2.5 2.5 6.1-6.1 1.1 1.1z" />
+        </svg>
+        {serviceName(platform)} connected
+      </span>
+    );
   }
 
-  const cls = `btn${primary ? " btn--primary" : ""}${block ? " btn--block" : ""}`;
-  const text = label ?? `connect ${serviceName(platform)}`;
+  const cls = `btn connect__btn${primary ? " btn--primary" : ""}${block ? " btn--block" : ""}`;
+  const text = label ?? `Connect ${serviceName(platform)}`;
+  const logo = <ServiceLogo platform={platform} size={20} className="connect__logo" />;
 
   if (platform !== "apple") {
     // Full-page navigation: the API route redirects to Spotify's or Google's sign-in screen.
     return (
       <a href={`/api/auth/${platform}/login?returnTo=${encodeURIComponent(returnTo ?? pathname)}`} className={cls}>
-        {text}
+        {logo}
+        <span>{text}</span>
       </a>
     );
   }
 
   return (
     <span className="connect">
-      <button onClick={go} disabled={busy} className={cls}>
-        {busy ? "connecting…" : text}
+      <button onClick={go} disabled={busy} aria-busy={busy} className={cls}>
+        {logo}
+        <span>{busy ? "Connecting…" : text}</span>
       </button>
       {error && (
         <span className="notice" role="alert">

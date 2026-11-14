@@ -1,5 +1,32 @@
 [
  {
+  "shape": "app screen",
+  "theme": "grid",
+  "axes": "light/grotesk-sans/cool",
+  "hero": "poster head on columns 1-6, ultramarine field 7 to bleed holding the paste form",
+  "nav": "edge-aligned wordmark, three links",
+  "footer": "one line: wordmark, privacy, terms",
+  "imagery": "cover art only",
+  "photos": [],
+  "entry": "field wipe",
+  "fingerprint": "grid-app-switch",
+  "sections": [
+   "hero field",
+   "library",
+   "shared page with app switch",
+   "switch",
+   "transfers"
+  ],
+  "signature": "the ultramarine field holding the paste control, and the app switch on every shared page",
+  "waived": [
+   "23",
+   "30b"
+  ],
+  "prompt": "improve the design, actual logos, animation and smoothness; user chose mockup C",
+  "date": "2026-11-14",
+  "mode": "build"
+ },
+ {
   "mode": "redesign",
   "depth": "full",
   "scope": "app",

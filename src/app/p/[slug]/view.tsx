@@ -2,7 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, useMe, useUrlError } from "@/components/api";
+import { AppSwitch } from "@/components/AppSwitch";
 import { ConnectButton, serviceName } from "@/components/ConnectButton";
+import { ServiceLogo } from "@/components/ServiceLogo";
 import { Cover, fmtDuration, TrackRow } from "@/components/TrackRow";
 import type { PublicPlaylist } from "@/lib/playlists";
 import { ALL_PLATFORMS, PLATFORMS, type Platform } from "@/lib/types";
@@ -26,6 +28,8 @@ export function UniversalPlaylistView({
   const [notFound, setNotFound] = useState(false);
   const [starting, setStarting] = useState<Platform | null>(null);
   const [copied, setCopied] = useState(false);
+  // The app the visitor picked in the switch; until they pick, a sensible default is derived below.
+  const [picked, setPicked] = useState<Platform | null>(null);
   const autoStarted = useRef(false);
 
   useEffect(() => {
@@ -62,16 +66,16 @@ export function UniversalPlaylistView({
 
   if (notFound) {
     return (
-      <div className="empty">
-        <h1 className="title">this link doesn&apos;t exist</h1>
-        <p>It may have been mistyped. Ask whoever sent it for a fresh one.</p>
+      <div className="share-empty">
+        <h1 className="title">This link doesn&apos;t exist</h1>
+        <p className="share__meta">It may have been mistyped. Ask whoever sent it for a fresh one.</p>
       </div>
     );
   }
   if (!pl) {
     return (
       <p className="label" role="status">
-        loading…
+        Loading…
       </p>
     );
   }
@@ -92,8 +96,8 @@ export function UniversalPlaylistView({
         Share link
       </label>
       <input id="share-url" readOnly value={pl.shareUrl} onFocus={(e) => e.target.select()} className="field field--mono" />
-      <button onClick={copyLink} className="btn btn--primary">
-        {copied ? "copied" : "copy link"}
+      <button onClick={copyLink} className="btn btn--primary btn--lg">
+        {copied ? "Copied" : "Copy link"}
       </button>
     </div>
   );
@@ -104,21 +108,24 @@ export function UniversalPlaylistView({
     </p>
   );
 
+  const art = (
+    <div className="share__art">
+      <Cover src={pl.imageUrl} title={pl.name} className="cover" />
+    </div>
+  );
+
   if (pl.kind === "song") {
     const track = pl.tracks[0];
     const order = [pl.source.platform, ...ALL_PLATFORMS.filter((p) => p !== pl.source.platform)];
-    // Fill the door for the service the viewer already uses; with none connected, all three stay outlined.
+    // Fill the door for the service the viewer already uses; with none connected, all three stay quiet.
     const mine = order.find((p) => p !== pl.source.platform && me?.connections[p]);
+    const meta = [pl.ownerName && `By ${pl.ownerName}`, track?.album, track?.durationMs ? fmtDuration(track.durationMs) : null].filter(Boolean);
     return (
       <div className="share">
-        <Cover src={pl.imageUrl} title={pl.name} className="cover" />
+        {art}
         <div className="share__head">
           <h1 className="title title--content title--share">{pl.name}</h1>
-          <div className="share__meta">
-            <span>{pl.ownerName}</span>
-            {track?.album && <span>{track.album}</span>}
-            {track?.durationMs ? <span>{fmtDuration(track.durationMs)}</span> : null}
-          </div>
+          {meta.length > 0 && <p className="share__meta">{meta.join(". ")}.</p>}
           {copyRow}
           {errorRow}
           <div className="ledger" aria-label="Where this song plays">
@@ -126,23 +133,32 @@ export function UniversalPlaylistView({
               const found = pl.links[p];
               const ok = found?.url && (found.status === "matched" || (found.status === "uncertain" && (found.confidence ?? 0) >= 0.6));
               return (
-                <div key={p} className="ledger__row">
-                  <span className="ledger__service">{serviceName(p)}</span>
+                <div key={p} className={`ledger__row${p === mine ? " ledger__row--mine" : ""}`}>
+                  <span className="ledger__service">
+                    <ServiceLogo platform={p} size={24} />
+                    {serviceName(p)}
+                  </span>
                   <span className="ledger__found">
                     {ok ? (
                       <>
-                        <span>{found!.title}</span>
+                        <span className="ledger__title">{found!.title}</span>
                         <span className="label">
-                          {p === pl.source.platform ? "the original" : found!.status === "matched" ? "same recording" : "closest match"}
+                          {p === pl.source.platform ? "The original" : found!.status === "matched" ? "Same recording" : "Closest match"}
                         </span>
                       </>
                     ) : (
-                      <span className="label">not found on {serviceName(p)}</span>
+                      <span className="label">Not found on {serviceName(p)}</span>
                     )}
                   </span>
                   {ok ? (
-                    <a href={found!.url} target="_blank" rel="noreferrer" className={`btn${p === mine ? " btn--primary" : ""}`}>
-                      open
+                    <a
+                      href={found!.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`btn ledger__open${p === mine ? " btn--primary" : ""}`}
+                      aria-label={`Open in ${serviceName(p)}`}
+                    >
+                      Open
                     </a>
                   ) : (
                     <span />
@@ -161,59 +177,74 @@ export function UniversalPlaylistView({
   const destinations = [...PLATFORMS, ...(me?.spotifyHouse || me?.connections.spotify ? (["spotify"] as Platform[]) : [])].filter(
     (p) => p !== pl.source.platform,
   );
+  // Default: the app an OAuth round-trip came back for, then one the visitor is already connected to, then the first.
+  const fallback =
+    (autoAdd && destinations.includes(autoAdd) ? autoAdd : null) ?? destinations.find((p) => me?.connections[p]) ?? destinations[0];
+  const app = picked && destinations.includes(picked) ? picked : fallback;
+  const ready = Boolean(me?.connections[app] || (app === "spotify" && me?.spotifyHouse));
+  const busy = starting !== null || autoStarting;
+  const label = `Add to ${serviceName(app)}`;
   // An album repeats one album name on every row; only a playlist gets the album column.
   const oneAlbum = new Set(pl.tracks.map((t) => t.album)).size <= 1;
+  const count = pl.partial ? `First ${pl.tracks.length} songs` : `${pl.tracks.length} songs`;
+  const meta = [pl.ownerName && `By ${pl.ownerName}`, minutes > 0 ? `${count}, ${minutes} min` : count].filter(Boolean);
 
   return (
-    <div>
-      <div className="share">
-        <Cover src={pl.imageUrl} title={pl.name} className="cover" />
-        <div className="share__head">
-          <h1 className="title title--content title--share">{pl.name}</h1>
-          <div className="share__meta">
-            {pl.ownerName && <span>{pl.ownerName}</span>}
-            <span>{pl.partial ? `first ${pl.tracks.length} songs` : `${pl.tracks.length} songs`}</span>
-            {minutes > 0 && <span>{minutes} min</span>}
-          </div>
-          <div className="share__actions">
-            {destinations.map((p, i) => {
-              const label = `add to ${serviceName(p)}`;
-              if (me?.connections[p] || (p === "spotify" && me?.spotifyHouse)) {
-                return (
-                  <button key={p} disabled={starting !== null || autoStarting} onClick={() => start(p)} className={`btn btn--lg${i === 0 ? " btn--primary" : ""}`}>
-                    {starting === p || (autoStarting && autoAdd === p) ? "adding…" : label}
-                  </button>
-                );
-              }
-              return (
-                <ConnectButton
-                  key={p}
-                  platform={p}
-                  label={label}
-                  primary={i === 0}
-                  returnTo={`/p/${slug}?add=${p}`}
-                  onConnected={async () => {
-                    await refreshMe();
-                    start(p);
-                  }}
-                />
-              );
-            })}
+    <div className="share">
+      {art}
+      <div className="share__head">
+        <h1 className="title title--content title--share">{pl.name}</h1>
+        <p className="share__meta">{meta.join(". ")}.</p>
+
+        <div className="share__open">
+          {/* With one app to add to there's nothing to choose, so the switch only shows for two or more. */}
+          {destinations.length > 1 && (
+            <>
+              <p className="label" aria-hidden="true">
+                Your app
+              </p>
+              <AppSwitch options={destinations} value={app} onChange={setPicked} label="Your app" disabled={busy} />
+            </>
+          )}
+          <div className="share__go">
+            <div key={app} className="share__action" data-app={app}>
+              {ready ? (
+                <button disabled={busy} onClick={() => start(app)} className="btn btn--primary btn--lg">
+                  <ServiceLogo platform={app} size={20} />
+                  {starting === app || (autoStarting && autoAdd === app) ? "Adding…" : label}
+                </button>
+              ) : (
+                <span className="share__connect">
+                  <ConnectButton
+                    platform={app}
+                    label={label}
+                    primary
+                    returnTo={`/p/${slug}?add=${app}`}
+                    onConnected={async () => {
+                      await refreshMe();
+                      start(app);
+                    }}
+                  />
+                </span>
+              )}
+            </div>
             {pl.source.url && (
-              <a href={pl.source.url} target="_blank" rel="noreferrer" className="btn btn--quiet btn--lg">
-                open in {serviceName(pl.source.platform)}
+              <a href={pl.source.url} target="_blank" rel="noreferrer" className="btn btn--quiet btn--lg share__source">
+                <ServiceLogo platform={pl.source.platform} size={20} />
+                Open in {serviceName(pl.source.platform)}
               </a>
             )}
           </div>
-          {copyRow}
-          {errorRow}
         </div>
-      </div>
 
-      <div className={`tracks${oneAlbum ? " tracks--album" : ""}`}>
-        {pl.tracks.map((t, i) => (
-          <TrackRow key={`${i}-${t.title}`} track={t} index={i} />
-        ))}
+        {copyRow}
+        {errorRow}
+
+        <div className={`tracks share__tracks${oneAlbum ? " tracks--album" : ""}`}>
+          {pl.tracks.map((t, i) => (
+            <TrackRow key={`${i}-${t.title}`} track={t} index={i} />
+          ))}
+        </div>
       </div>
     </div>
   );
