@@ -22,7 +22,7 @@ export default async function Page({ params, searchParams }: PageProps<"/p/[slug
       slug={slug}
       initialError={typeof error === "string" ? error : null}
       justCreated={created !== undefined}
-      autoAdd={add === "spotify" || add === "apple" ? add : null}
+      autoAdd={add === "spotify" || add === "apple" || add === "youtube" ? add : null}
     />
   );
 }

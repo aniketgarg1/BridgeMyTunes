@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, useMe, useUrlError } from "@/components/api";
 import { ConnectButton, PlatformDot } from "@/components/ConnectButton";
-import { PLATFORM_LABEL, type Platform, type PlaylistSummary } from "@/lib/types";
+import { PLATFORM_LABEL, PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
 
 const LIKED = "__liked__";
 
@@ -11,8 +11,8 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   const router = useRouter();
   const { me, refresh } = useMe();
   const [error, setError] = useUrlError(initialError);
-  const [from, setFrom] = useState<Platform>("apple");
-  const to: Platform = from === "apple" ? "spotify" : "apple";
+  const [from, setFrom] = useState<Platform>(PLATFORMS[0]);
+  const to: Platform = PLATFORMS.find((p) => p !== from) ?? PLATFORMS[1];
   const [loaded, setLoaded] = useState<{ platform: Platform; list: PlaylistSummary[] } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -106,7 +106,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
                   <input type="checkbox" checked={selected.has(LIKED)} onChange={() => toggle(LIKED)} className="accent-[var(--accent)]" />
                   <div className="bridge-gradient h-10 w-10 rounded" />
                   <div>
-                    <p className="text-sm">{from === "spotify" ? "Liked Songs" : "Library songs"}</p>
+                    <p className="text-sm">{from === "apple" ? "Library songs" : "Liked songs"}</p>
                   </div>
                 </label>
               </li>

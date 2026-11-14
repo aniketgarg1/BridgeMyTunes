@@ -9,7 +9,7 @@ export function ShareView({ initialError }: { initialError: string | null }) {
   const router = useRouter();
   const { me, refresh } = useMe();
   const [error, setError] = useUrlError(initialError);
-  const [platform, setPlatform] = useState<Platform>("spotify");
+  const [platform, setPlatform] = useState<Platform>(PLATFORMS[0]);
   const [loaded, setLoaded] = useState<{ platform: Platform; list: PlaylistSummary[] } | null>(null);
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function ShareView({ initialError }: { initialError: string | null }) {
     <div className="mx-auto max-w-xl space-y-12 pt-8">
       <section className="space-y-5 text-center">
         <h1 className="text-4xl font-semibold tracking-tight">Share a playlist</h1>
-        <p className="text-muted">One link. Opens on Spotify and Apple Music.</p>
+        <p className="text-muted">Paste a YouTube Music or Apple Music playlist. Get one link for both.</p>
         <form
           className="flex items-center gap-2 rounded-full border border-border bg-surface p-1.5 focus-within:border-accent"
           onSubmit={(e) => {
@@ -99,7 +99,7 @@ export function ShareView({ initialError }: { initialError: string | null }) {
                 <button
                   disabled={!p.readable || busy !== null}
                   onClick={() => create({ platform, playlistId: p.id }, p.id)}
-                  title={p.readable ? `Share ${p.name}` : "Spotify only shares playlists you own"}
+                  title={p.readable ? `Share ${p.name}` : "This playlist can't be read"}
                   className="group w-full text-left disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {p.imageUrl ? (

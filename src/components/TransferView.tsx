@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import type { MatchResult, Platform, Track, TransferSource, TransferStatus } from "@/lib/types";
-import { PLATFORM_LABEL } from "@/lib/types";
+import { PLATFORM_BUTTON, PLATFORM_LABEL } from "@/lib/types";
 import { api } from "./api";
 import { PlatformDot } from "./ConnectButton";
 import { TrackRow } from "./TrackRow";
@@ -230,7 +230,7 @@ export function TransferView({ id }: { id: string }) {
                 {t.timings?.totalMs ? <span className="text-muted"> Took {(t.timings.totalMs / 1000).toFixed(1)}s.</span> : null}
               </p>
               {t.destUrl && (
-                <a href={t.destUrl} target="_blank" rel="noreferrer" className={`rounded-full px-4 py-2 text-sm font-medium ${t.destination === "spotify" ? "bg-spotify text-black" : "bg-apple text-white"}`}>
+                <a href={t.destUrl} target="_blank" rel="noreferrer" className={`rounded-full px-4 py-2 text-sm font-medium ${PLATFORM_BUTTON[t.destination]}`}>
                   Open in {dest}
                 </a>
               )}

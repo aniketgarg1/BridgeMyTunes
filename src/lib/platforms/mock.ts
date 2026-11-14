@@ -62,7 +62,12 @@ function build(platform: Platform, rows: Row[], prefix: string): Track[] {
     isrc,
     explicit: explicit ?? false,
     artworkUrl: undefined,
-    url: platform === "spotify" ? `https://open.spotify.com/track/${prefix}${i}` : `https://music.apple.com/us/song/${prefix}${i}`,
+    url:
+      platform === "spotify"
+        ? `https://open.spotify.com/track/${prefix}${i}`
+        : platform === "youtube"
+          ? `https://music.youtube.com/watch?v=${prefix}${i}`
+          : `https://music.apple.com/us/song/${prefix}${i}`,
     ids: { [platform]: `${prefix}${i}` },
   }));
 }
@@ -70,6 +75,8 @@ function build(platform: Platform, rows: Row[], prefix: string): Track[] {
 const CATALOG: Record<Platform, Track[]> = {
   spotify: build("spotify", [...SPOTIFY, ...SPOTIFY_ONLY_DEST], "sp"),
   apple: build("apple", APPLE, "am"),
+  // YouTube has no ISRCs and messier titles.
+  youtube: build("youtube", [...SPOTIFY, ...SPOTIFY_ONLY_DEST].map(([t, a, al, d, , e]) => [t, a, al, d, undefined, e] as Row), "yt"),
 };
 
 const PLAYLISTS: Record<Platform, { id: string; name: string; description: string; trackIdx: number[] }[]> = {
@@ -77,12 +84,15 @@ const PLAYLISTS: Record<Platform, { id: string; name: string; description: strin
     { id: "mock-road-trip", name: "Road Trip 2026", description: "Windows down, volume up.", trackIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
     { id: "mock-chill", name: "Sunday Reset", description: "Slow mornings.", trackIdx: [0, 4, 8] },
   ],
+  youtube: [
+    { id: "PLmockRoadTrip", name: "Road Trip 2026", description: "Windows down, volume up.", trackIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+  ],
   apple: [
     { id: "p.mockLateNight", name: "Late Night Drive", description: "Neon and empty highways.", trackIdx: [14, 15, 16, 0, 9, 1, 12] },
   ],
 };
 
-const LIKED: Record<Platform, number[]> = { spotify: [0, 8, 2, 6], apple: [14, 15, 16, 0] };
+const LIKED: Record<Platform, number[]> = { spotify: [0, 8, 2, 6], apple: [14, 15, 16, 0], youtube: [0, 8, 2, 6] };
 
 const tokens = (s: string) =>
   s
@@ -91,6 +101,13 @@ const tokens = (s: string) =>
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
     .filter(Boolean);
+
+const mockPlaylistUrl = (platform: Platform, id: string) =>
+  platform === "spotify"
+    ? `https://open.spotify.com/playlist/${id}`
+    : platform === "youtube"
+      ? `https://music.youtube.com/playlist?list=${id}`
+      : `https://music.apple.com/library/playlist/${id}`;
 
 const store = globalThis as unknown as { _mockWrites?: Map<string, string[]> };
 store._mockWrites ??= new Map();
@@ -115,7 +132,7 @@ export class MockAdapter implements MusicAdapter {
       name: p.name,
       description: p.description,
       ownerName: "Demo User",
-      url: this.platform === "spotify" ? `https://open.spotify.com/playlist/${p.id}` : `https://music.apple.com/library/playlist/${p.id}`,
+      url: mockPlaylistUrl(this.platform, p.id),
       tracks: p.trackIdx.map((i) => this.catalog[i]),
     };
   }
@@ -147,8 +164,7 @@ export class MockAdapter implements MusicAdapter {
   async createPlaylist(name: string, _description: string, trackIds: string[]) {
     const id = `mock-created-${Date.now().toString(36)}`;
     store._mockWrites!.set(id, [...trackIds]);
-    const url = this.platform === "spotify" ? `https://open.spotify.com/playlist/${id}` : `https://music.apple.com/library/playlist/${id}`;
-    return { id, url };
+    return { id, url: mockPlaylistUrl(this.platform, id) };
   }
 
   async addToPlaylist(playlistId: string, trackIds: string[]) {

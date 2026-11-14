@@ -5,7 +5,7 @@ import { api, useMe, useUrlError } from "@/components/api";
 import { ConnectButton, PlatformDot } from "@/components/ConnectButton";
 import { TrackRow } from "@/components/TrackRow";
 import type { PublicPlaylist } from "@/lib/playlists";
-import { PLATFORM_LABEL, PLATFORMS, type Platform } from "@/lib/types";
+import { PLATFORM_BUTTON, PLATFORM_LABEL, PLATFORMS, type Platform } from "@/lib/types";
 
 export function UniversalPlaylistView({
   slug,
@@ -83,6 +83,11 @@ export function UniversalPlaylistView({
         </div>
 
         <div className="flex w-full max-w-xs flex-col gap-2">
+          {!PLATFORMS.includes(pl.source.platform) && pl.source.url && (
+            <a href={pl.source.url} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm hover:bg-surface">
+              <PlatformDot platform={pl.source.platform} /> Open in {PLATFORM_LABEL[pl.source.platform]}
+            </a>
+          )}
           {PLATFORMS.map((p) => {
             const label = PLATFORM_LABEL[p];
             if (p === pl.source.platform && pl.source.url) {
@@ -98,7 +103,7 @@ export function UniversalPlaylistView({
                   key={p}
                   disabled={starting !== null || autoStarting}
                   onClick={() => start(p)}
-                  className={`rounded-full px-5 py-2.5 text-sm font-medium disabled:opacity-60 ${p === "spotify" ? "bg-spotify text-black" : "bg-apple text-white"}`}
+                  className={`rounded-full px-5 py-2.5 text-sm font-medium disabled:opacity-60 ${PLATFORM_BUTTON[p]}`}
                 >
                   {starting === p || (autoStarting && autoAdd === p) ? "Adding…" : `Add to ${label}`}
                 </button>

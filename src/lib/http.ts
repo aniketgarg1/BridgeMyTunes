@@ -2,15 +2,18 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { NotConnectedError } from "./platforms/index";
 import { PlatformError } from "./platforms/types";
-import { PLATFORMS, type Platform } from "./types";
+import { ALL_PLATFORMS, type Platform } from "./types";
 
-export const isPlatform = (v: unknown): v is Platform => typeof v === "string" && (PLATFORMS as string[]).includes(v);
+export const isPlatform = (v: unknown): v is Platform => typeof v === "string" && (ALL_PLATFORMS as string[]).includes(v);
 
 export function jsonError(err: unknown) {
   if (err instanceof NotConnectedError) {
     return NextResponse.json({ error: err.message, needsConnect: err.platform }, { status: 401 });
   }
   if (err instanceof PlatformError) {
+    if (err.platform === "youtube" && /quotaExceeded/.test(err.message)) {
+      return NextResponse.json({ error: "YouTube's daily limit for this app is used up. It resets at midnight Pacific time." }, { status: 429 });
+    }
     const hint =
       err.status === 403 && err.platform === "spotify"
         ? " Spotify only shares tracks of playlists you own or collaborate on."

@@ -8,7 +8,8 @@
   --foreground: #f2f2f5;
   --muted: #9a9aab;
   --spotify: #1ed760;
-  --apple: #fa2d48;
+  --apple: #fa57a0;
+  --youtube: #ff1a3c;
   --accent: #a78bfa;
   --ok: #34d399;
   --warn: #fbbf24;
@@ -24,6 +25,7 @@
   --color-muted: var(--muted);
   --color-spotify: var(--spotify);
   --color-apple: var(--apple);
+  --color-youtube: var(--youtube);
   --color-accent: var(--accent);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
@@ -43,11 +45,11 @@ body {
 }
 
 .bridge-gradient {
-  background: linear-gradient(90deg, var(--spotify), var(--accent) 50%, var(--apple));
+  background: linear-gradient(90deg, var(--youtube), var(--accent) 50%, var(--apple));
 }
 
 .bridge-text {
-  background: linear-gradient(90deg, var(--spotify), var(--accent) 50%, var(--apple));
+  background: linear-gradient(90deg, var(--youtube), var(--accent) 50%, var(--apple));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

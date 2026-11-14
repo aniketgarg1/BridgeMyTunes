@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { PLATFORM_LABEL, type Platform } from "@/lib/types";
+import { PLATFORM_BUTTON, PLATFORM_DOT, PLATFORM_LABEL, type Platform } from "@/lib/types";
 import { api } from "./api";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -54,7 +54,7 @@ async function connectApple() {
 export const PlatformDot = ({ platform, className = "" }: { platform: Platform; className?: string }) => (
   <span
     aria-hidden
-    className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${platform === "spotify" ? "bg-spotify" : "bg-apple"} ${className}`}
+    className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${PLATFORM_DOT[platform]} ${className}`}
   />
 );
 
@@ -98,16 +98,14 @@ export function ConnectButton({
     );
   }
 
-  const base = `inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium disabled:opacity-60 ${
-    platform === "spotify" ? "bg-spotify text-black hover:brightness-110" : "bg-apple text-white hover:brightness-110"
-  }`;
+  const base = `inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium hover:brightness-110 disabled:opacity-60 ${PLATFORM_BUTTON[platform]}`;
   const cls = `${base} ${className}`;
 
-  if (platform === "spotify") {
-    // Full-page navigation: the API route redirects to Spotify's OAuth screen.
+  if (platform !== "apple") {
+    // Full-page navigation: the API route redirects to Spotify's or Google's sign-in screen.
     return (
-      <a href={`/api/auth/spotify/login?returnTo=${encodeURIComponent(returnTo ?? pathname)}`} className={cls}>
-        {label ?? "Connect Spotify"}
+      <a href={`/api/auth/${platform}/login?returnTo=${encodeURIComponent(returnTo ?? pathname)}`} className={cls}>
+        {label ?? `Connect ${PLATFORM_LABEL[platform]}`}
       </a>
     );
   }

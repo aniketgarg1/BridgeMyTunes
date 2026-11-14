@@ -50,6 +50,17 @@ export const env = {
   get appleDefaultStorefront() {
     return opt("APPLE_DEFAULT_STOREFRONT") ?? "us";
   },
+  /** YouTube Data API key (reads public playlists without login). */
+  get youtubeApiKey() {
+    return req("YOUTUBE_API_KEY");
+  },
+  /** Google OAuth client for "Sign in with Google" (creating YouTube Music playlists). */
+  get googleClientId() {
+    return req("GOOGLE_CLIENT_ID");
+  },
+  get googleClientSecret() {
+    return req("GOOGLE_CLIENT_SECRET");
+  },
   get geminiApiKey() {
     return opt("GEMINI_API_KEY");
   },

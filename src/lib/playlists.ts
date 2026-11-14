@@ -4,7 +4,8 @@ import type { ObjectId } from "mongodb";
 import { collections, type UniversalPlaylistDoc } from "./db";
 import { env } from "./env";
 import { parseAppleUrl } from "./platforms/apple";
-import { adapterFor, anonymousAppleAdapter, getConnection } from "./platforms/index";
+import { adapterFor, anonymousAppleAdapter, anonymousYouTubeAdapter, getConnection } from "./platforms/index";
+import { parseYouTubeUrl } from "./platforms/youtube";
 import type { MusicAdapter } from "./platforms/types";
 import type { Platform, PlaylistSnapshot } from "./types";
 
@@ -19,6 +20,8 @@ export function parsePlaylistInput(input: string): { platform: Platform; id: str
   if (sp) return { platform: "spotify", id: sp[1] };
   const am = parseAppleUrl(s);
   if (am) return { platform: "apple", ...am };
+  const yt = parseYouTubeUrl(s);
+  if (yt) return { platform: "youtube", ...yt };
   return null;
 }
 
@@ -38,6 +41,10 @@ async function sourceAdapter(ownerId: ObjectId, platform: Platform, id: string, 
   if (platform === "apple" && id.startsWith("pl.") && !(await getConnection(ownerId, "apple"))) {
     return anonymousAppleAdapter(storefront);
   }
+  // Public/unlisted YouTube playlists can be read with the API key alone.
+  if (platform === "youtube" && !(await getConnection(ownerId, "youtube"))) {
+    return anonymousYouTubeAdapter();
+  }
   return adapterFor(ownerId, platform);
 }
 
@@ -48,7 +55,7 @@ export async function createUniversalPlaylist(ownerId: ObjectId, platform: Platf
   const doc: UniversalPlaylistDoc = {
     slug: slugify(snap.name),
     ownerId,
-    source: { platform, id, url: snap.url, catalog: platform === "apple" && id.startsWith("pl.") },
+    source: { platform, id, url: snap.url, catalog: (platform === "apple" && id.startsWith("pl.")) || platform === "youtube" },
     ...fields(snap),
     createdAt: new Date(),
     syncedAt: new Date(),

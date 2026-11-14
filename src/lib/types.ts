@@ -1,10 +1,30 @@
-export type Platform = "spotify" | "apple";
+export type Platform = "spotify" | "apple" | "youtube";
 
-export const PLATFORMS: Platform[] = ["spotify", "apple"];
+/** Every platform the backend understands. */
+export const ALL_PLATFORMS: Platform[] = ["spotify", "apple", "youtube"];
+
+/**
+ * Platforms offered in the UI. Spotify is left out: in Development Mode it only works for 5 allowlisted
+ * users, while YouTube Music and Apple Music work for anyone who signs in. Its code is kept for later.
+ */
+export const PLATFORMS: Platform[] = ["youtube", "apple"];
 
 export const PLATFORM_LABEL: Record<Platform, string> = {
   spotify: "Spotify",
   apple: "Apple Music",
+  youtube: "YouTube Music",
+};
+
+/** Tailwind classes per platform (kept as full literals so Tailwind can find them). */
+export const PLATFORM_DOT: Record<Platform, string> = {
+  spotify: "bg-spotify",
+  apple: "bg-apple",
+  youtube: "bg-youtube",
+};
+export const PLATFORM_BUTTON: Record<Platform, string> = {
+  spotify: "bg-spotify text-black",
+  apple: "bg-apple text-white",
+  youtube: "bg-youtube text-white",
 };
 
 /** A platform-neutral track. `ids` holds the native id on each platform we know it for. */
