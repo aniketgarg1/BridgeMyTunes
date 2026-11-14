@@ -172,7 +172,7 @@ export function UniversalPlaylistView({
           <h1 className="title title--content title--share">{pl.name}</h1>
           <div className="share__meta">
             {pl.ownerName && <span>{pl.ownerName}</span>}
-            <span>{pl.tracks.length} songs</span>
+            <span>{pl.partial ? `first ${pl.tracks.length} songs` : `${pl.tracks.length} songs`}</span>
             {minutes > 0 && <span>{minutes} min</span>}
           </div>
           <div className="share__actions">

@@ -48,6 +48,8 @@ export interface PlaylistSnapshot {
   ownerName?: string;
   url?: string;
   tracks: Track[];
+  /** The source only showed part of the list (Spotify's public view stops at 100 songs). */
+  partial?: boolean;
 }
 
 export type MatchStatus = "matched" | "uncertain" | "unavailable";

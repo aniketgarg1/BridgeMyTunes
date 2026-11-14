@@ -91,9 +91,7 @@ export function ShareView({ initialError }: { initialError: string | null }) {
               className="field"
             />
           </div>
-        ) : (
-          <p className="drop__hint">Sharing a Spotify playlist? Open it in the Spotify desktop app, press Cmd+A then Cmd+C, and paste the songs here.</p>
-        )}
+        ) : null}
         {error && (
           <p className="drop__error" role="alert">
             {error}

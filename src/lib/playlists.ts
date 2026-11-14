@@ -13,6 +13,7 @@ import {
   anonymousYouTubeAdapter,
   getConnection,
 } from "./platforms/index";
+import { embedEnabled, PASTE_TIP, SpotifyEmbedReader } from "./platforms/spotify-embed";
 import type { MusicAdapter } from "./platforms/types";
 import { ALL_PLATFORMS, PLATFORM_LABEL, type Platform, type PlaylistSnapshot, type Track } from "./types";
 
@@ -36,12 +37,11 @@ function slugify(name: string) {
 async function readerFor(ownerId: ObjectId, platform: Platform, id: string, storefront?: string): Promise<MusicAdapter> {
   if (platform === "spotify") {
     if (id.startsWith("album:")) return anonymousSpotifyAdapter();
-    if (!(await getConnection(ownerId, "spotify"))) {
-      throw new Error(
-        "Spotify only shares a playlist's songs with its owner. Open the playlist in the Spotify desktop app, press Cmd+A then Cmd+C, and paste the songs here.",
-      );
-    }
-    return adapterFor(ownerId, "spotify");
+    if (await getConnection(ownerId, "spotify")) return adapterFor(ownerId, "spotify");
+    // Not signed in to Spotify (nearly everyone): read the public playlist from Spotify's embed player.
+    if (env.mock) return anonymousSpotifyAdapter();
+    if (!embedEnabled()) throw new Error(`Spotify only shares a playlist's songs with its owner. ${PASTE_TIP}`);
+    return new SpotifyEmbedReader();
   }
   if (platform === "apple") {
     const isPublic = id.startsWith("pl.") || id.startsWith("album:");
@@ -152,7 +152,7 @@ export async function createUniversalPlaylist(ownerId: ObjectId, platform: Platf
     slug: slugify(snap.name),
     ownerId,
     kind: "collection",
-    source: { platform, id, url: snap.url, catalog: platform !== "spotify" || id.startsWith("album:"), storefront },
+    source: { platform, id, url: snap.url, catalog: true, storefront },
     ...fields(snap),
     createdAt: new Date(),
     syncedAt: new Date(),
@@ -167,6 +167,7 @@ const fields = (s: PlaylistSnapshot) => ({
   imageUrl: s.imageUrl ?? s.tracks.find((t) => t.artworkUrl)?.artworkUrl,
   ownerName: s.ownerName,
   tracks: s.tracks,
+  partial: Boolean(s.partial),
 });
 
 /**
@@ -208,6 +209,7 @@ export function publicPlaylist(doc: UniversalPlaylistDoc, viewerId: ObjectId | n
     ownerName: doc.ownerName,
     source: { platform: doc.source.platform, url: doc.source.url },
     tracks: doc.tracks,
+    partial: Boolean(doc.partial),
     syncedAt: doc.syncedAt.toISOString(),
     isOwner: Boolean(viewerId && viewerId.equals(doc.ownerId)),
     shareUrl: shareUrl(doc.slug),

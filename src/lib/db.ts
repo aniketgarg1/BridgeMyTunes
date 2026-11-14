@@ -47,6 +47,8 @@ export interface UniversalPlaylistDoc {
   imageUrl?: string;
   ownerName?: string;
   tracks: Track[];
+  /** Only part of the source list could be read (e.g. Spotify's public view stops at 100 songs). */
+  partial?: boolean;
   createdAt: Date;
   syncedAt: Date;
 }
