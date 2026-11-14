@@ -137,6 +137,10 @@ export class MockAdapter implements MusicAdapter {
     };
   }
 
+  async getTrack(id: string) {
+    return this.catalog.find((t) => t.ids[this.platform] === id) ?? null;
+  }
+
   async getLikedTracks() {
     return LIKED[this.platform].map((i) => this.catalog[i]);
   }

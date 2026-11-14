@@ -35,7 +35,11 @@ export interface UniversalPlaylistDoc {
   _id?: ObjectId;
   slug: string;
   ownerId: ObjectId;
-  source: { platform: Platform; id: string; url?: string; catalog?: boolean };
+  source: { platform: Platform; id: string; url?: string; catalog?: boolean; storefront?: string };
+  /** "song" pages link to the track on every service; anything else is a playlist or album. */
+  kind?: "song" | "collection";
+  /** For songs: where the same recording lives on each service. */
+  links?: Partial<Record<Platform, SongLink>>;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -43,6 +47,14 @@ export interface UniversalPlaylistDoc {
   tracks: Track[];
   createdAt: Date;
   syncedAt: Date;
+}
+
+export interface SongLink {
+  status: "matched" | "uncertain" | "unavailable";
+  url?: string;
+  title?: string;
+  artists?: string[];
+  confidence?: number;
 }
 
 export interface TransferDoc {

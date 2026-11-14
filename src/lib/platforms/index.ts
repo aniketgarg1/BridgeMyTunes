@@ -5,7 +5,7 @@ import { env } from "../env";
 import { PLATFORM_LABEL, type Platform } from "../types";
 import { AppleAdapter } from "./apple";
 import { MockAdapter } from "./mock";
-import { refreshSpotifyToken, SpotifyAdapter } from "./spotify";
+import { refreshSpotifyToken, SpotifyAdapter, spotifyAppToken } from "./spotify";
 import { refreshGoogleToken, YouTubeAdapter } from "./youtube";
 import type { MusicAdapter } from "./types";
 
@@ -58,6 +58,19 @@ export async function adapterFor(userId: ObjectId, platform: Platform): Promise<
   if (platform === "spotify") return new SpotifyAdapter(await freshToken(conn));
   if (platform === "youtube") return new YouTubeAdapter(await freshToken(conn));
   return new AppleAdapter(conn.accessToken, conn.storefront);
+}
+
+/** Spotify songs, albums and search work with the app's own token (no user, no tester list). */
+export async function anonymousSpotifyAdapter(): Promise<MusicAdapter> {
+  if (env.mock) return new MockAdapter("spotify");
+  return new SpotifyAdapter(await spotifyAppToken());
+}
+
+/** Read-only adapter for a platform without anyone signed in. */
+export async function anonymousAdapter(platform: Platform, storefront?: string): Promise<MusicAdapter> {
+  if (platform === "spotify") return anonymousSpotifyAdapter();
+  if (platform === "youtube") return anonymousYouTubeAdapter();
+  return anonymousAppleAdapter(storefront);
 }
 
 /** Public YouTube playlists can be read with the API key alone. */

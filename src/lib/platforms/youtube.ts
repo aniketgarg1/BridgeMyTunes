@@ -172,6 +172,11 @@ export class YouTubeAdapter implements MusicAdapter {
     };
   }
 
+  async getTrack(id: string): Promise<Track | null> {
+    const v = (await this.videos([id])).get(id);
+    return v ? videoToTrack(v) : null;
+  }
+
   async getLikedTracks(): Promise<Track[]> {
     if (!this.accessToken) throw new Error("Sign in with Google first.");
     return this.playlistVideos("LL");

@@ -138,7 +138,29 @@ export class AppleAdapter implements MusicAdapter {
   }
 
   async getPlaylist(id: string): Promise<PlaylistSnapshot> {
+    if (id.startsWith("album:")) return this.getCatalogAlbum(id.slice(6));
     return id.startsWith("pl.") ? this.getCatalogPlaylist(id) : this.getLibraryPlaylist(id);
+  }
+
+  async getTrack(id: string): Promise<Track | null> {
+    const res: any = await this.get(`/catalog/${this.storefront}/songs/${encodeURIComponent(id)}`);
+    return catalogSongToTrack(res.data?.[0]);
+  }
+
+  private async getCatalogAlbum(id: string): Promise<PlaylistSnapshot> {
+    const res: any = await this.get(`/catalog/${this.storefront}/albums/${encodeURIComponent(id)}`);
+    const a = res.data?.[0];
+    if (!a) throw new Error("That Apple Music album wasn't found.");
+    const songs = await this.paginate(`/catalog/${this.storefront}/albums/${encodeURIComponent(id)}/tracks?limit=100`);
+    return {
+      platform: "apple",
+      id: `album:${id}`,
+      name: a.attributes?.name ?? "Album",
+      imageUrl: artwork(a.attributes?.artwork),
+      ownerName: a.attributes?.artistName,
+      url: a.attributes?.url,
+      tracks: songs.filter((s) => s.type === "songs").map(catalogSongToTrack).filter((t): t is Track => t !== null),
+    };
   }
 
   private async getCatalogPlaylist(id: string): Promise<PlaylistSnapshot> {

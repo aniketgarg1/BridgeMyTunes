@@ -52,6 +52,16 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
   });
 }
 
+let appToken: { token: string; exp: number } | null = null;
+
+/** App-only token (client credentials): enough for songs, albums and search, no user involved. */
+export async function spotifyAppToken(): Promise<string> {
+  if (appToken && appToken.exp - Date.now() > 60_000) return appToken.token;
+  const t = await tokenRequest({ grant_type: "client_credentials" });
+  appToken = { token: t.access_token, exp: Date.now() + t.expires_in * 1000 };
+  return appToken.token;
+}
+
 export const exchangeSpotifyCode = (code: string) =>
   tokenRequest({ grant_type: "authorization_code", code, redirect_uri: spotifyRedirectUri() });
 
@@ -125,7 +135,29 @@ export class SpotifyAdapter implements MusicAdapter {
       }));
   }
 
+  async getTrack(id: string): Promise<Track | null> {
+    return toTrack(await this.get(`/tracks/${encodeURIComponent(id)}`));
+  }
+
+  private async getAlbum(id: string): Promise<PlaylistSnapshot> {
+    const a: any = await this.get(`/albums/${encodeURIComponent(id)}`);
+    const items = await this.paginate(`/albums/${encodeURIComponent(id)}/tracks?limit=50`);
+    const tracks = items
+      .map((t) => toTrack({ ...t, album: { name: a.name, images: a.images }, external_ids: t.external_ids }))
+      .filter((t): t is Track => t !== null);
+    return {
+      platform: "spotify",
+      id: `album:${id}`,
+      name: a.name,
+      imageUrl: a.images?.[0]?.url,
+      ownerName: (a.artists ?? []).map((x: any) => x.name).join(", "),
+      url: a.external_urls?.spotify,
+      tracks,
+    };
+  }
+
   async getPlaylist(id: string): Promise<PlaylistSnapshot> {
+    if (id.startsWith("album:")) return this.getAlbum(id.slice(6));
     const meta: any = await this.get(`/playlists/${encodeURIComponent(id)}?fields=id,name,description,images,owner,external_urls`);
     const entries = await this.paginate(`/playlists/${encodeURIComponent(id)}/items?limit=50&additional_types=track`);
     const tracks = entries

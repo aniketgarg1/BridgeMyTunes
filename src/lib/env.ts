@@ -26,7 +26,9 @@ export const env = {
     return req("MONGODB_URI");
   },
   get mongoDb() {
-    return opt("MONGODB_DB") ?? "tunebridge";
+    const name = opt("MONGODB_DB") ?? "tunebridge";
+    // Demo mode gets its own database so fake catalog matches never leak into real ones.
+    return opt("MOCK_MUSIC") === "1" ? `${name}_demo` : name;
   },
   get spotifyClientId() {
     return req("SPOTIFY_CLIENT_ID");

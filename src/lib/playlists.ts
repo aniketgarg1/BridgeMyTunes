@@ -1,29 +1,25 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import type { ObjectId } from "mongodb";
-import { collections, type UniversalPlaylistDoc } from "./db";
+import { collections, type SongLink, type UniversalPlaylistDoc } from "./db";
 import { env } from "./env";
-import { parseAppleUrl } from "./platforms/apple";
-import { adapterFor, anonymousAppleAdapter, anonymousYouTubeAdapter, getConnection } from "./platforms/index";
-import { parseYouTubeUrl } from "./platforms/youtube";
+import type { MusicLink } from "./links";
+import { matchTracks } from "./matching/matcher";
+import {
+  adapterFor,
+  anonymousAdapter,
+  anonymousAppleAdapter,
+  anonymousSpotifyAdapter,
+  anonymousYouTubeAdapter,
+  getConnection,
+} from "./platforms/index";
 import type { MusicAdapter } from "./platforms/types";
-import type { Platform, PlaylistSnapshot } from "./types";
+import { ALL_PLATFORMS, PLATFORM_LABEL, type Platform, type PlaylistSnapshot, type Track } from "./types";
 
-/** Universal playlists: a snapshot of a source playlist behind a shareable /p/<slug> link. */
+/** Share pages: a song, album or playlist behind one /p/<slug> link that works on every service. */
 
 /** How stale a universal playlist may get before a view triggers a re-sync from its source. */
 export const LIVE_SYNC_MS = 5 * 60_000;
-
-export function parsePlaylistInput(input: string): { platform: Platform; id: string; storefront?: string } | null {
-  const s = input.trim();
-  const sp = s.match(/open\.spotify\.com\/(?:intl-\w+\/)?playlist\/([A-Za-z0-9]+)/) ?? s.match(/^spotify:playlist:([A-Za-z0-9]+)$/);
-  if (sp) return { platform: "spotify", id: sp[1] };
-  const am = parseAppleUrl(s);
-  if (am) return { platform: "apple", ...am };
-  const yt = parseYouTubeUrl(s);
-  if (yt) return { platform: "youtube", ...yt };
-  return null;
-}
 
 function slugify(name: string) {
   const base = name
@@ -36,26 +32,72 @@ function slugify(name: string) {
   return `${base || "playlist"}-${randomBytes(3).toString("hex")}`;
 }
 
-async function sourceAdapter(ownerId: ObjectId, platform: Platform, id: string, storefront?: string): Promise<MusicAdapter> {
-  // Public Apple Music catalog playlists can be read with just the developer token.
-  if (platform === "apple" && id.startsWith("pl.") && !(await getConnection(ownerId, "apple"))) {
-    return anonymousAppleAdapter(storefront);
+/** Who reads the source: public songs, albums and catalog playlists need no sign-in; private ones use the owner's account. */
+async function readerFor(ownerId: ObjectId, platform: Platform, id: string, storefront?: string): Promise<MusicAdapter> {
+  if (platform === "spotify") return id.startsWith("album:") ? anonymousSpotifyAdapter() : adapterFor(ownerId, "spotify");
+  if (platform === "apple") {
+    const isPublic = id.startsWith("pl.") || id.startsWith("album:");
+    if (isPublic && !(await getConnection(ownerId, "apple"))) return anonymousAppleAdapter(storefront);
+    return adapterFor(ownerId, "apple");
   }
-  // Public/unlisted YouTube playlists can be read with the API key alone.
-  if (platform === "youtube" && !(await getConnection(ownerId, "youtube"))) {
-    return anonymousYouTubeAdapter();
+  // Public and unlisted YouTube playlists read with the API key; a signed-in owner can share private ones too.
+  if (!(await getConnection(ownerId, "youtube"))) return anonymousYouTubeAdapter();
+  return adapterFor(ownerId, "youtube");
+}
+
+/** Find the same song on every service, without anyone signed in. Each service is tried independently. */
+async function resolveSongLinks(track: Track, source: Platform): Promise<Partial<Record<Platform, SongLink>>> {
+  const entries = await Promise.all(
+    ALL_PLATFORMS.map(async (p): Promise<[Platform, SongLink]> => {
+      if (p === source) return [p, { status: "matched", url: track.url, title: track.title, artists: track.artists, confidence: 1 }];
+      try {
+        const [r] = await matchTracks([track], await anonymousAdapter(p));
+        const m = r.status !== "unavailable" ? r.match : undefined;
+        return [p, { status: r.status, url: m?.url, title: m?.title, artists: m?.artists, confidence: r.confidence }];
+      } catch (err) {
+        console.warn(`[song] ${p} lookup failed:`, (err as Error).message);
+        return [p, { status: "unavailable" }];
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
+/** Create a share page from any pasted link: a song, an album or a playlist. */
+export async function createShare(ownerId: ObjectId, link: MusicLink): Promise<UniversalPlaylistDoc> {
+  const { playlists } = await collections();
+  if (link.kind === "song") {
+    const reader = await anonymousAdapter(link.platform, link.storefront);
+    const track = await reader.getTrack(link.id);
+    if (!track) throw new Error(`That ${PLATFORM_LABEL[link.platform]} song wasn't found.`);
+    const doc: UniversalPlaylistDoc = {
+      slug: slugify(`${track.title} ${track.artists[0] ?? ""}`),
+      ownerId,
+      kind: "song",
+      source: { platform: link.platform, id: link.id, url: track.url, catalog: true, storefront: link.storefront },
+      name: track.title,
+      ownerName: track.artists.join(", "),
+      imageUrl: track.artworkUrl,
+      tracks: [track],
+      links: await resolveSongLinks(track, link.platform),
+      createdAt: new Date(),
+      syncedAt: new Date(),
+    };
+    await playlists.insertOne(doc);
+    return doc;
   }
-  return adapterFor(ownerId, platform);
+  return createUniversalPlaylist(ownerId, link.platform, link.id, link.storefront);
 }
 
 export async function createUniversalPlaylist(ownerId: ObjectId, platform: Platform, id: string, storefront?: string) {
-  const adapter = await sourceAdapter(ownerId, platform, id, storefront);
+  const adapter = await readerFor(ownerId, platform, id, storefront);
   const snap = await adapter.getPlaylist(id);
   const { playlists } = await collections();
   const doc: UniversalPlaylistDoc = {
     slug: slugify(snap.name),
     ownerId,
-    source: { platform, id, url: snap.url, catalog: (platform === "apple" && id.startsWith("pl.")) || platform === "youtube" },
+    kind: "collection",
+    source: { platform, id, url: snap.url, catalog: platform !== "spotify" || id.startsWith("album:"), storefront },
     ...fields(snap),
     createdAt: new Date(),
     syncedAt: new Date(),
@@ -77,9 +119,10 @@ const fields = (s: PlaylistSnapshot) => ({
  * latest version. Fails soft (keeps the last snapshot) if the owner disconnected.
  */
 export async function syncUniversalPlaylist(doc: UniversalPlaylistDoc, force = false): Promise<UniversalPlaylistDoc> {
+  if (doc.kind === "song") return doc; // a song doesn't change
   if (!force && Date.now() - doc.syncedAt.getTime() < LIVE_SYNC_MS) return doc;
   try {
-    const adapter = await sourceAdapter(doc.ownerId, doc.source.platform, doc.source.id);
+    const adapter = await readerFor(doc.ownerId, doc.source.platform, doc.source.id, doc.source.storefront);
     const snap = await adapter.getPlaylist(doc.source.id);
     const update = { ...fields(snap), syncedAt: new Date() };
     const { playlists } = await collections();
@@ -102,6 +145,8 @@ export const shareUrl = (slug: string) => `${env.appUrl}/p/${slug}`;
 export function publicPlaylist(doc: UniversalPlaylistDoc, viewerId: ObjectId | null) {
   return {
     slug: doc.slug,
+    kind: doc.kind ?? "collection",
+    links: doc.links ?? {},
     name: doc.name,
     description: doc.description,
     imageUrl: doc.imageUrl,

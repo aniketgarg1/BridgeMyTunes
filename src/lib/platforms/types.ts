@@ -12,6 +12,8 @@ export interface MusicAdapter {
   listPlaylists(): Promise<PlaylistSummary[]>;
   getPlaylist(id: string): Promise<PlaylistSnapshot>;
   getLikedTracks(): Promise<Track[]>;
+  /** One song by its id on this service, or null if it doesn't exist. */
+  getTrack(id: string): Promise<Track | null>;
   /** Exact recording lookup. Returns candidates per ISRC (an ISRC can map to several catalog entries). */
   lookupByIsrc(isrcs: string[]): Promise<Map<string, Track[]>>;
   search(query: SearchQuery): Promise<Track[]>;
