@@ -66,11 +66,11 @@ Open the app at **http://127.0.0.1:3000**, not `localhost`: Spotify rejects `loc
 `users` (anonymous sessions) · `connections` (per-platform tokens) · `playlists` (universal links + track snapshot) ·
 `transfers` (status, progress, per-track match results) · `mappings` (match cache) · `events` (telemetry).
 
-## Deploying (Vultr)
+## Deploying
 
-`npm run build && npm start` on any Node 20+ host. Transfers currently run in-process. To move them to dedicated
-workers, call `runTransfer(id)` from a queue consumer instead of `startTransfer`. Set `APP_URL` to your HTTPS domain
-and add `<APP_URL>/api/auth/spotify/callback` to the Spotify app.
+See [DEPLOY.md](DEPLOY.md) for Vercel + MongoDB Atlas. Transfers run with `after()` after the API responds, with up to
+5 minutes per transfer (`maxDuration = 300`). To move them to dedicated workers later, call `runTransfer(id)` from a
+queue consumer.
 
 ## Not built yet
 
