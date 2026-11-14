@@ -63,3 +63,38 @@ export function parseMusicLink(input: string): MusicLink | null {
   }
   return null;
 }
+
+/*
+ * Many songs in one paste: what the Spotify desktop app copies after Cmd+A, Cmd+C on a playlist (one
+ * open.spotify.com/track/… link per line). A one-line <input> strips the line breaks, so links can arrive
+ * glued together; the patterns rely on each service's id shape instead of separators.
+ */
+const MANY: { platform: MusicLink["platform"]; re: RegExp }[] = [
+  { platform: "spotify", re: /(?:open\.spotify\.com\/(?:intl-[\w-]+\/)?track\/|spotify:track:)([A-Za-z0-9]{22})/g },
+  { platform: "youtube", re: /(?:youtube\.com\/watch\?(?:[^\s]*?&)?v=|youtu\.be\/)([\w-]{11})/g },
+  { platform: "apple", re: /music\.apple\.com\/(?:([a-z]{2})\/)?(?:song\/[^/\s]+\/(\d+)|album\/[^/\s]+\/\d+\?i=(\d+))/g },
+];
+
+/** Every song link in the text, in order, without repeats. */
+export function parseSongLinks(input: string): MusicLink[] {
+  const found: { at: number; link: MusicLink }[] = [];
+  for (const { platform, re } of MANY) {
+    for (const m of input.matchAll(re)) {
+      const link: MusicLink =
+        platform === "apple"
+          ? { platform, kind: "song", id: m[2] ?? m[3], storefront: m[1] }
+          : { platform, kind: "song", id: m[1] };
+      found.push({ at: m.index ?? 0, link });
+    }
+  }
+  const seen = new Set<string>();
+  return found
+    .sort((a, b) => a.at - b.at)
+    .map((f) => f.link)
+    .filter((l) => {
+      const key = `${l.platform}:${l.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}

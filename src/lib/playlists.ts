@@ -34,7 +34,15 @@ function slugify(name: string) {
 
 /** Who reads the source: public songs, albums and catalog playlists need no sign-in; private ones use the owner's account. */
 async function readerFor(ownerId: ObjectId, platform: Platform, id: string, storefront?: string): Promise<MusicAdapter> {
-  if (platform === "spotify") return id.startsWith("album:") ? anonymousSpotifyAdapter() : adapterFor(ownerId, "spotify");
+  if (platform === "spotify") {
+    if (id.startsWith("album:")) return anonymousSpotifyAdapter();
+    if (!(await getConnection(ownerId, "spotify"))) {
+      throw new Error(
+        "Spotify only shares a playlist's songs with its owner. Open the playlist in the Spotify desktop app, press Cmd+A then Cmd+C, and paste the songs here.",
+      );
+    }
+    return adapterFor(ownerId, "spotify");
+  }
   if (platform === "apple") {
     const isPublic = id.startsWith("pl.") || id.startsWith("album:");
     if (isPublic && !(await getConnection(ownerId, "apple"))) return anonymousAppleAdapter(storefront);
@@ -61,6 +69,53 @@ async function resolveSongLinks(track: Track, source: Platform): Promise<Partial
     }),
   );
   return Object.fromEntries(entries);
+}
+
+const MAX_PASTED_SONGS = 200;
+
+/** Look up each pasted song with our own keys (no sign-in) and keep them as one shareable list. */
+export async function createShareFromSongs(ownerId: ObjectId, links: MusicLink[], name?: string): Promise<UniversalPlaylistDoc> {
+  const list = links.slice(0, MAX_PASTED_SONGS);
+  const readers = new Map<string, MusicAdapter>();
+  const reader = async (l: MusicLink) => {
+    const key = `${l.platform}:${l.storefront ?? ""}`;
+    if (!readers.has(key)) readers.set(key, await anonymousAdapter(l.platform, l.storefront));
+    return readers.get(key)!;
+  };
+  const tracks: (Track | null)[] = new Array(list.length).fill(null);
+  let next = 0;
+  // Spotify removed its batch lookup, so songs are fetched one at a time, a few in parallel.
+  await Promise.all(
+    Array.from({ length: Math.min(4, list.length) }, async () => {
+      while (next < list.length) {
+        const i = next++;
+        try {
+          tracks[i] = await (await reader(list[i])).getTrack(list[i].id);
+        } catch (err) {
+          console.warn(`[songs] ${list[i].platform}:${list[i].id} lookup failed:`, (err as Error).message);
+        }
+      }
+    }),
+  );
+  const found = tracks.filter((t): t is Track => t !== null);
+  if (!found.length) throw new Error("None of those songs could be found. Check the links and try again.");
+  const platforms = new Set(list.map((l) => l.platform));
+  const source = list[0].platform;
+  const title = name?.trim().slice(0, 100) || (platforms.size === 1 ? `Songs from ${PLATFORM_LABEL[source]}` : "Shared songs");
+  const doc: UniversalPlaylistDoc = {
+    slug: slugify(title),
+    ownerId,
+    kind: "collection",
+    source: { platform: source, id: "songs", catalog: true },
+    name: title,
+    imageUrl: found.find((t) => t.artworkUrl)?.artworkUrl,
+    tracks: found,
+    createdAt: new Date(),
+    syncedAt: new Date(),
+  };
+  const { playlists } = await collections();
+  await playlists.insertOne(doc);
+  return doc;
 }
 
 /** Create a share page from any pasted link: a song, an album or a playlist. */
@@ -119,7 +174,7 @@ const fields = (s: PlaylistSnapshot) => ({
  * latest version. Fails soft (keeps the last snapshot) if the owner disconnected.
  */
 export async function syncUniversalPlaylist(doc: UniversalPlaylistDoc, force = false): Promise<UniversalPlaylistDoc> {
-  if (doc.kind === "song") return doc; // a song doesn't change
+  if (doc.kind === "song" || doc.source.id === "songs") return doc; // songs and pasted lists don't change
   if (!force && Date.now() - doc.syncedAt.getTime() < LIVE_SYNC_MS) return doc;
   try {
     const adapter = await readerFor(doc.ownerId, doc.source.platform, doc.source.id, doc.source.storefront);

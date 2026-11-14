@@ -1,14 +1,22 @@
 import { NextResponse } from "next/server";
 import { track } from "@/lib/analytics";
 import { isPlatform, jsonError } from "@/lib/http";
-import { parseMusicLink, type MusicLink } from "@/lib/links";
-import { createShare, shareUrl } from "@/lib/playlists";
+import { parseMusicLink, parseSongLinks, type MusicLink } from "@/lib/links";
+import { createShare, createShareFromSongs, shareUrl } from "@/lib/playlists";
 import { ensureUserId } from "@/lib/session";
 
 /** Create a share page from { platform, playlistId } or any pasted song, album or playlist { url }. */
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { platform?: string; playlistId?: string; url?: string };
+    const body = (await req.json()) as { platform?: string; playlistId?: string; url?: string; name?: string };
+    // Several song links in one paste (a Spotify desktop copy, or a list): one shared list of songs.
+    const songs = body.url ? parseSongLinks(body.url) : [];
+    if (songs.length > 1) {
+      const userId = await ensureUserId();
+      const doc = await createShareFromSongs(userId, songs, typeof body.name === "string" ? body.name : undefined);
+      await track("share_created", { source: songs[0].platform, kind: "songs", value: doc.tracks.length });
+      return NextResponse.json({ slug: doc.slug, shareUrl: shareUrl(doc.slug) });
+    }
     let target: MusicLink | null = null;
     if (body.url) {
       target = parseMusicLink(body.url);

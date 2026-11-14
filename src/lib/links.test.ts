@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMusicLink } from "./links";
+import { parseMusicLink, parseSongLinks } from "./links";
 
 describe("parseMusicLink", () => {
   it("reads songs on every service", () => {
@@ -22,5 +22,32 @@ describe("parseMusicLink", () => {
   it("rejects other links", () => {
     expect(parseMusicLink("https://example.com/song/1")).toBeNull();
     expect(parseMusicLink("not a link")).toBeNull();
+  });
+});
+
+
+describe("parseSongLinks", () => {
+  it("reads a Spotify desktop copy, one link per line", () => {
+    const text = "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b\nhttps://open.spotify.com/track/5QO79kh1waicV47BqGRL3g\n";
+    expect(parseSongLinks(text).map((l) => l.id)).toEqual(["0VjIjW4GlUZAMYd2vXMi3b", "5QO79kh1waicV47BqGRL3g"]);
+  });
+
+  it("reads links glued together by a one-line input", () => {
+    const text = "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3bhttps://open.spotify.com/track/5QO79kh1waicV47BqGRL3g";
+    expect(parseSongLinks(text)).toHaveLength(2);
+  });
+
+  it("mixes services and drops repeats", () => {
+    const text = [
+      "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b?si=abc",
+      "https://music.youtube.com/watch?v=4NRXx6U8ABQ&si=x",
+      "https://music.apple.com/us/album/after-hours/1499378108?i=1499378613",
+      "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b",
+    ].join(" ");
+    expect(parseSongLinks(text).map((l) => `${l.platform}:${l.id}`)).toEqual([
+      "spotify:0VjIjW4GlUZAMYd2vXMi3b",
+      "youtube:4NRXx6U8ABQ",
+      "apple:1499378613",
+    ]);
   });
 });

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api, ApiError, useMe, useUrlError } from "@/components/api";
 import { ConnectButton, serviceName } from "@/components/ConnectButton";
 import { Cover } from "@/components/TrackRow";
+import { parseSongLinks } from "@/lib/links";
 import { PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
 
 export function ShareView({ initialError }: { initialError: string | null }) {
@@ -13,6 +14,9 @@ export function ShareView({ initialError }: { initialError: string | null }) {
   const [platform, setPlatform] = useState<Platform>(PLATFORMS[0]);
   const [loaded, setLoaded] = useState<{ platform: Platform; list: PlaylistSummary[] } | null>(null);
   const [link, setLink] = useState("");
+  const [listName, setListName] = useState("");
+  // A Spotify desktop copy (Cmd+A, Cmd+C) or any list of song links becomes one shared list.
+  const songCount = parseSongLinks(link).length;
   const [busy, setBusy] = useState<string | null>(null);
 
   const connected = Boolean(me?.connections[platform]);
@@ -52,7 +56,7 @@ export function ShareView({ initialError }: { initialError: string | null }) {
           className="drop__form"
           onSubmit={(e) => {
             e.preventDefault();
-            if (link.trim()) create({ url: link.trim() }, "url");
+            if (link.trim()) create(songCount > 1 ? { url: link, name: listName } : { url: link.trim() }, "url");
           }}
         >
           <label htmlFor="music-link" className="visually-hidden">
@@ -71,6 +75,25 @@ export function ShareView({ initialError }: { initialError: string | null }) {
             {busy === "url" ? "making your link…" : "make a link"}
           </button>
         </form>
+        {songCount > 1 ? (
+          <div className="drop__list">
+            <span className="drop__count">{songCount} songs found</span>
+            <label htmlFor="list-name" className="visually-hidden">
+              Name this list
+            </label>
+            <input
+              id="list-name"
+              name="name"
+              value={listName}
+              onChange={(e) => setListName(e.target.value)}
+              placeholder="name it (optional)"
+              autoComplete="off"
+              className="field"
+            />
+          </div>
+        ) : (
+          <p className="drop__hint">Sharing a Spotify playlist? Open it in the Spotify desktop app, press Cmd+A then Cmd+C, and paste the songs here.</p>
+        )}
         {error && (
           <p className="drop__error" role="alert">
             {error}
