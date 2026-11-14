@@ -32,7 +32,7 @@ async function connectApple() {
   const { developerToken, mock } = await api<{ developerToken?: string; mock?: boolean }>("/api/auth/apple/token");
   if (!mock) {
     const MusicKit = await loadMusicKit();
-    await MusicKit.configure({ developerToken, app: { name: "TuneBridge", build: "0.1.0" } });
+    await MusicKit.configure({ developerToken, app: { name: "BridgeMyTunes", build: "0.1.0" } });
     const music = MusicKit.getInstance();
     // Drop any cached login so the person can pick the Apple ID that has the subscription.
     if (music.isAuthorized) await music.unauthorize().catch(() => {});

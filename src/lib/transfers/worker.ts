@@ -105,7 +105,7 @@ export async function runTransfer(id: ObjectId) {
     } else {
       const created = await dest.createPlaylist(
         src.name,
-        src.description ?? `Moved from ${sourcePlatform ? PLATFORM_LABEL[sourcePlatform] : "a TuneBridge link"} with TuneBridge`,
+        src.description ?? `Shared with BridgeMyTunes${sourcePlatform ? ` from ${PLATFORM_LABEL[sourcePlatform]}` : ""}`,
         ids,
       );
       destPlaylistId = created.id;

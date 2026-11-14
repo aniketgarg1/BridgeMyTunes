@@ -146,6 +146,9 @@ export function TransferView({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"review" | "matched">("review");
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Bumped by "Try again" to restart polling.
+  const [attempt, setAttempt] = useState(0);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -165,7 +168,7 @@ export function TransferView({ id }: { id: string }) {
       stopped = true;
       clearTimeout(timer);
     };
-  }, [id]);
+  }, [id, attempt]);
 
   const groups = useMemo(() => {
     const rs = t?.results ?? [];
@@ -220,7 +223,28 @@ export function TransferView({ id }: { id: string }) {
               </div>
             ))}
           </div>
-          {t.status === "failed" && <p className="mt-4 text-sm text-bad">{t.error}</p>}
+          {t.status === "failed" && (
+            <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-bad">{t.error}</p>
+              <button
+                disabled={retrying}
+                onClick={async () => {
+                  setRetrying(true);
+                  try {
+                    await api(`/api/transfers/${id}/retry`, { method: "POST" });
+                    setAttempt((a) => a + 1);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Couldn't retry");
+                  } finally {
+                    setRetrying(false);
+                  }
+                }}
+                className="shrink-0 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
+              >
+                {retrying ? "Starting…" : "Try again"}
+              </button>
+            </div>
+          )}
           {t.status === "done" && (
             <div className="mt-5 flex flex-col items-start justify-between gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
               <p className="text-sm">
@@ -274,7 +298,11 @@ export function TransferView({ id }: { id: string }) {
             groups.review.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted">{running ? "Songs that need a look will show up here." : "Nothing left to review."}</p>
             ) : t.status !== "done" ? (
-              <p className="py-10 text-center text-sm text-muted">{groups.review.length} songs will need a look once matching finishes.</p>
+              <p className="py-10 text-center text-sm text-muted">
+                {t.status === "failed"
+                  ? "Fix the problem above and try again to review these."
+                  : `${groups.review.length} ${groups.review.length === 1 ? "song needs" : "songs need"} a look once matching finishes.`}
+              </p>
             ) : (
               <ul className="space-y-3">
                 {groups.review.map((r) => (
