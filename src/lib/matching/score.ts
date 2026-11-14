@@ -117,6 +117,13 @@ export function scoreCandidate(src: Track, cand: Track): ScoreBreakdown {
     flags.push(`Adds ${extra.join(", ")}`);
   }
 
+  // A re-upload by someone else (lyric channels, fan uploads) is the same song but not the source to link;
+  // it still matches when it's all there is, but an official upload always ranks above it.
+  if (cand.official === false) {
+    score *= 0.9;
+    flags.push("Unofficial upload");
+  }
+
   // Same ISRC = same recording (ISRC identifies a recording, not a song). Trust it unless metadata is wildly off.
   const isrc = Boolean(src.isrc && cand.isrc && src.isrc === cand.isrc);
   if (isrc) score = title > 0.5 || artist > 0.6 ? Math.max(score, 0.97) : Math.max(score, 0.75);

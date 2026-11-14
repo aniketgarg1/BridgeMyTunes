@@ -48,3 +48,12 @@ describe("videoToTrack", () => {
     expect(videoToTrack(video({ title: "Private video" }))).toBeNull();
   });
 });
+
+describe("official uploads", () => {
+  it("marks Topic, VEVO and the artist's own channel as official, lyric channels not", () => {
+    expect(videoToTrack(video({ title: "Blinding Lights", channelTitle: "The Weeknd - Topic" }))!.official).toBe(true);
+    expect(videoToTrack(video({ title: "The Weeknd - Blinding Lights (Official Video)", channelTitle: "TheWeekndVEVO" }))!.official).toBe(true);
+    expect(videoToTrack(video({ title: "Dua Lipa - Levitating (Official Music Video)", channelTitle: "Dua Lipa" }))!.official).toBe(true);
+    expect(videoToTrack(video({ title: "The Weeknd - Blinding Lights (Lyrics)", channelTitle: "7clouds" }))!.official).toBe(false);
+  });
+});

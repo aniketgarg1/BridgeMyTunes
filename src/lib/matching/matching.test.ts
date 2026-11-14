@@ -98,3 +98,14 @@ describe("scoreCandidate", () => {
     expect(ranked[1].score).toBeLessThan(AUTO_ACCEPT);
   });
 });
+
+describe("youtube uploads", () => {
+  it("ranks the official upload above an identical lyric re-upload", () => {
+    const src = t("Blinding Lights", ["The Weeknd"], { durationMs: 200040, album: "After Hours" });
+    const ranked = rankCandidates(src, [
+      t("Blinding Lights", ["The Weeknd"], { durationMs: 200000, ids: { youtube: "lyrics" }, official: false }),
+      t("Blinding Lights", ["The Weeknd"], { durationMs: 201000, album: "After Hours", ids: { youtube: "topic" }, official: true }),
+    ]);
+    expect(ranked[0].ids.youtube).toBe("topic");
+  });
+});

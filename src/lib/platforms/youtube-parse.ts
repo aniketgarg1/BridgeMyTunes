@@ -65,6 +65,11 @@ export function videoToTrack(v: any): Track | null {
   }
   title = title.replace(NOISE, "").trim();
 
+  // Official: YouTube's auto-generated "Artist - Topic" audio, VEVO, or a channel named like the artist.
+  const squash = (s: string) => s.toLowerCase().replace(/vevo$|official$|\s+|[^\p{L}\p{N}]/gu, "");
+  const ch = squash(channel.replace(/ - Topic$/, ""));
+  const official = isTopic || /VEVO$/i.test(channel) || (ch.length > 1 && artists.some((a) => squash(a) === ch || squash(a).startsWith(ch) || ch.startsWith(squash(a))));
+
   return {
     title,
     artists,
@@ -73,5 +78,6 @@ export function videoToTrack(v: any): Track | null {
     artworkUrl: sn.thumbnails?.high?.url ?? sn.thumbnails?.medium?.url ?? sn.thumbnails?.default?.url,
     url: `https://music.youtube.com/watch?v=${id}`,
     ids: { youtube: id },
+    official,
   };
 }

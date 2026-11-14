@@ -27,6 +27,8 @@ export interface Track {
   artworkUrl?: string;
   url?: string;
   ids: Partial<Record<Platform, string>>;
+  /** YouTube only: false for re-uploads (lyric channels, fan uploads) that aren't the artist's own or a Topic channel. */
+  official?: boolean;
 }
 
 export interface PlaylistSummary {
