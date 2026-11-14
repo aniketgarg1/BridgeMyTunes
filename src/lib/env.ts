@@ -43,7 +43,9 @@ export const env = {
   get applePrivateKey() {
     const inline = opt("APPLE_PRIVATE_KEY");
     if (inline) return inline.replace(/\\n/g, "\n");
-    return readFileSync(req("APPLE_PRIVATE_KEY_PATH"), "utf8");
+    const path = opt("APPLE_PRIVATE_KEY_PATH");
+    if (!path) throw new Error("Apple Music isn't set up yet: add APPLE_PRIVATE_KEY (the .p8 key).");
+    return readFileSync(path, "utf8");
   },
   get appleDefaultStorefront() {
     return opt("APPLE_DEFAULT_STOREFRONT") ?? "us";

@@ -8,6 +8,18 @@ import { ensureUserId } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
   const returnTo = safeReturnTo(req.nextUrl.searchParams.get("returnTo"));
+  try {
+    return await startLogin(returnTo);
+  } catch (err) {
+    // Usually a missing setting (database or Spotify keys). Show it on the page instead of a blank error.
+    console.error("[spotify login]", err);
+    const url = new URL(returnTo, env.appUrl);
+    url.searchParams.set("error", err instanceof Error ? err.message : "Couldn't start Spotify login");
+    return NextResponse.redirect(url);
+  }
+}
+
+async function startLogin(returnTo: string) {
   const userId = await ensureUserId();
 
   if (env.mock) {
