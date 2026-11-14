@@ -213,8 +213,18 @@ export class YouTubeAdapter implements MusicAdapter {
   }
 
   async addToPlaylist(playlistId: string, trackIds: string[]) {
+    // Skip songs already there (a retry after a partial failure), so nothing is added twice. Listing costs 1 unit/page.
+    const existing = new Set<string>();
+    let pageToken: string | undefined;
+    do {
+      const res: any = await this.get("/playlistItems", { part: "contentDetails", playlistId, maxResults: 50, pageToken });
+      for (const i of res.items ?? []) if (i.contentDetails?.videoId) existing.add(i.contentDetails.videoId);
+      pageToken = res.nextPageToken;
+    } while (pageToken && existing.size < 5000);
     // One at a time: parallel inserts into the same playlist conflict.
     for (const videoId of trackIds) {
+      if (existing.has(videoId)) continue;
+      existing.add(videoId);
       await this.send("/playlistItems", { part: "snippet" }, {
         snippet: { playlistId, resourceId: { kind: "youtube#video", videoId } },
       });

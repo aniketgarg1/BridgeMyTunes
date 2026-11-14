@@ -102,14 +102,25 @@ export async function runTransfer(id: ObjectId) {
     let destUrl: string | undefined;
     if (t.mode === "library") {
       if (ids.length) await dest.saveToLibrary(ids);
+    } else if (t.destPlaylistId) {
+      // A retry: fill the playlist the earlier attempt already created instead of making a second one.
+      destPlaylistId = t.destPlaylistId;
+      destUrl = t.destUrl;
+      await dest.addToPlaylist(destPlaylistId, ids);
     } else {
-      const created = await dest.createPlaylist(
-        src.name,
-        src.description ?? `Shared with BridgeMyTunes${sourcePlatform ? ` from ${PLATFORM_LABEL[sourcePlatform]}` : ""}`,
-        ids,
-      );
-      destPlaylistId = created.id;
-      destUrl = created.url;
+      const description = src.description ?? `Shared with BridgeMyTunes${sourcePlatform ? ` from ${PLATFORM_LABEL[sourcePlatform]}` : ""}`;
+      if (t.destination === "youtube") {
+        // YouTube adds songs one by one and can fail midway, so remember the playlist before filling it.
+        const created = await dest.createPlaylist(src.name, description, []);
+        destPlaylistId = created.id;
+        destUrl = created.url;
+        await set({ destPlaylistId, destUrl });
+        await dest.addToPlaylist(destPlaylistId, ids);
+      } else {
+        const created = await dest.createPlaylist(src.name, description, ids);
+        destPlaylistId = created.id;
+        destUrl = created.url;
+      }
     }
     const written = new Set(ids);
     for (const r of results) if (r.match?.ids[t.destination] && written.has(r.match.ids[t.destination]!) && r.status === "matched") r.added = true;

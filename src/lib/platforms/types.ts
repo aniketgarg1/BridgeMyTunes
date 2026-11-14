@@ -55,6 +55,11 @@ export async function fetchJson<T>(
   }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    // YouTube often answers 409 ABORTED / SERVICE_UNAVAILABLE right after a playlist is created. It's transient.
+    if (platform === "youtube" && res.status === 409 && /ABORTED|SERVICE_UNAVAILABLE/.test(body) && attempt < 5) {
+      await sleep(1000 * 2 ** attempt);
+      return fetchJson<T>(platform, url, init, attempt + 1);
+    }
     throw new PlatformError(
       `${platform} API ${res.status} on ${new URL(url).pathname}: ${body.slice(0, 300)}`,
       res.status,
