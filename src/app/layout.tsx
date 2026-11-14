@@ -1,42 +1,41 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Onest, Outfit } from "next/font/google";
 import Link from "next/link";
+import { Nav } from "@/components/Nav";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"], weight: ["300", "500"] });
+const onest = Onest({ variable: "--font-onest", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
   title: "BridgeMyTunes: share music with anyone",
-  description:
-    "One playlist link that works on Spotify and Apple Music. Switch platforms without rebuilding your library.",
+  description: "Paste a song, album or playlist link. Anyone can open it on YouTube Music, Apple Music or Spotify.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        <header>
-          <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-4 text-sm">
-            <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-              <span className="bridge-gradient inline-block h-2.5 w-6 rounded-full" aria-hidden />
-              BridgeMyTunes
-            </Link>
-            <div className="ml-auto flex items-center gap-1 sm:gap-4">
-              <Link href="/switch" className="rounded-md px-2 py-1 text-muted hover:text-foreground">
-                Switch
+    <html lang="en" className={`${outfit.variable} ${onest.variable}`}>
+      <body>
+        <div className="shell">
+          <header className="topbar">
+            <div className="wrap topbar__inner">
+              <Link href="/" className="wordmark">
+                bridgemytunes
               </Link>
-              <Link href="/transfers" className="rounded-md px-2 py-1 text-muted hover:text-foreground">
-                Transfers
-              </Link>
+              <Nav />
             </div>
-          </nav>
-        </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">{children}</main>
-        <footer className="flex justify-center gap-4 py-6 text-xs text-muted">
-          <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-          <Link href="/terms" className="hover:text-foreground">Terms</Link>
-        </footer>
+          </header>
+          <main className="main">
+            <div className="wrap">{children}</div>
+          </main>
+          <footer className="footer">
+            <div className="wrap footer__inner">
+              <Link href="/privacy">privacy</Link>
+              <Link href="/terms">terms</Link>
+              <span className="footer__note">not affiliated with google, apple or spotify</span>
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );

@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, useMe, useUrlError } from "@/components/api";
-import { ConnectButton, PlatformDot } from "@/components/ConnectButton";
-import { PLATFORM_LABEL, PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
+import { ConnectButton, serviceName } from "@/components/ConnectButton";
+import { Cover } from "@/components/TrackRow";
+import { PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
 
 const LIKED = "__liked__";
 
@@ -55,21 +56,24 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Switch platforms</h1>
-      </div>
+    <div className="switch">
+      <section className="transfer__head">
+        <h1 className="title">move your music</h1>
+        <p className="sub">Copy playlists and liked songs from one service to the other. Nothing is removed from where they are now.</p>
+      </section>
 
-      {error && <p className="rounded-lg border border-bad/40 bg-bad/10 px-4 py-3 text-sm text-bad">{error}</p>}
+      {error && (
+        <p className="notice" role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3">
+      <div className="route">
         {[from, to].map((p, i) => (
-          <div key={p} className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 ${i === 1 ? "col-start-3" : ""}`}>
-            <p className="text-xs uppercase tracking-wider text-muted">{i === 0 ? "From" : "To"}</p>
-            <p className="flex items-center gap-2 font-medium">
-              <PlatformDot platform={p} /> {PLATFORM_LABEL[p]}
-            </p>
-            <ConnectButton platform={p} connected={Boolean(me?.connections[p])} onConnected={refresh} className="w-full" />
+          <div key={p} className={`route__end ${i === 0 ? "route__end--from" : "route__end--to"}`}>
+            <span className="label">{i === 0 ? "from" : "to"}</span>
+            <span className="route__name">{serviceName(p)}</span>
+            <ConnectButton platform={p} connected={Boolean(me?.connections[p])} onConnected={refresh} />
           </div>
         ))}
         <button
@@ -78,76 +82,66 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
             setSelected(new Set());
           }}
           aria-label="Swap direction"
-          className="col-start-2 row-start-1 self-center rounded-full border border-border bg-surface px-3 py-2 text-sm hover:bg-surface-2"
+          className="btn route__swap"
         >
-          ⇄
+          swap
         </button>
       </div>
 
       {fromOk && (
-        <div className="rounded-2xl border border-border bg-surface">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-sm font-medium">Choose what to move</p>
+        <section className="panel" aria-labelledby="pick-title">
+          <div className="library__head">
+            <h2 id="pick-title">choose what to move</h2>
             {playlists && (
               <button
-                className="text-xs text-muted hover:text-foreground"
+                className="btn btn--quiet"
                 onClick={() => setSelected(selected.size === readable.length + 1 ? new Set() : new Set([LIKED, ...readable.map((p) => p.id)]))}
               >
-                {selected.size === readable.length + 1 ? "Clear" : "Select all"}
+                {selected.size === readable.length + 1 ? "clear" : "select all"}
               </button>
             )}
           </div>
           {!playlists ? (
-            <p className="px-4 py-8 text-center text-sm text-muted">Loading your library…</p>
+            <p className="label" role="status">
+              loading your library…
+            </p>
           ) : (
-            <ul className="max-h-[420px] divide-y divide-border overflow-y-auto">
+            <ul className="picker" role="list">
               <li>
-                <label className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-surface-2">
-                  <input type="checkbox" checked={selected.has(LIKED)} onChange={() => toggle(LIKED)} className="accent-[var(--accent)]" />
-                  <div className="bridge-gradient h-10 w-10 rounded" />
-                  <div>
-                    <p className="text-sm">{from === "apple" ? "Library songs" : "Liked songs"}</p>
-                  </div>
+                <label className="picker__row">
+                  <input type="checkbox" checked={selected.has(LIKED)} onChange={() => toggle(LIKED)} className="check" />
+                  <Cover title="liked" />
+                  <span className="track__main">
+                    <span className="track__title">{from === "apple" ? "Library songs" : "Liked songs"}</span>
+                    <span className="track__artist">saved to your {serviceName(to)} library</span>
+                  </span>
                 </label>
               </li>
               {playlists.map((p) => (
                 <li key={p.id}>
-                  <label className={`flex items-center gap-3 px-4 py-3 ${p.readable ? "cursor-pointer hover:bg-surface-2" : "opacity-50"}`}>
-                    <input type="checkbox" disabled={!p.readable} checked={selected.has(p.id)} onChange={() => toggle(p.id)} className="accent-[var(--accent)]" />
-                    {p.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt="" className="h-10 w-10 rounded bg-surface-2 object-cover" />
-                    ) : (
-                      <div className="h-10 w-10 rounded bg-surface-2" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm">{p.name}</p>
-                      <p className="truncate text-xs text-muted">
-                        {p.readable ? (p.trackCount !== undefined ? `${p.trackCount} songs` : "") : "Not yours, can't be read"}
-                      </p>
-                    </div>
+                  <label className="picker__row" aria-disabled={!p.readable}>
+                    <input type="checkbox" disabled={!p.readable} checked={selected.has(p.id)} onChange={() => toggle(p.id)} className="check" />
+                    <Cover src={p.imageUrl} title={p.name} />
+                    <span className="track__main">
+                      <span className="track__title">{p.name}</span>
+                      <span className="track__artist">
+                        {p.readable ? (p.trackCount !== undefined ? `${p.trackCount} songs` : "playlist") : "not yours, can't be read"}
+                      </span>
+                    </span>
                   </label>
                 </li>
               ))}
             </ul>
           )}
-          <div className="flex flex-col gap-2 border-t border-border p-4 sm:flex-row sm:justify-end">
-            <button
-              disabled={!toOk || busy || !playlists}
-              onClick={() => run([LIKED, ...readable.map((p) => p.id)])}
-              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium hover:bg-surface-2 disabled:opacity-40"
-            >
-              Transfer everything
+          <div className="picker__actions">
+            <button disabled={!toOk || busy || !playlists} onClick={() => run([LIKED, ...readable.map((p) => p.id)])} className="btn">
+              move everything
             </button>
-            <button
-              disabled={!toOk || busy || selected.size === 0}
-              onClick={() => run([...selected])}
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background disabled:opacity-40"
-            >
-              {busy ? "Starting…" : `Transfer ${selected.size || ""} selected`}
+            <button disabled={!toOk || busy || selected.size === 0} onClick={() => run([...selected])} className="btn btn--primary">
+              {busy ? "starting…" : selected.size ? `move ${selected.size} selected` : "move selected"}
             </button>
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

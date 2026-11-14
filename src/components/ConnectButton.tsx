@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { PLATFORM_BUTTON, PLATFORM_DOT, PLATFORM_LABEL, type Platform } from "@/lib/types";
+import { PLATFORM_LABEL, type Platform } from "@/lib/types";
 import { api } from "./api";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -51,12 +51,8 @@ async function connectApple() {
   }
 }
 
-export const PlatformDot = ({ platform, className = "" }: { platform: Platform; className?: string }) => (
-  <span
-    aria-hidden
-    className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${PLATFORM_DOT[platform]} ${className}`}
-  />
-);
+/** Lowercase service name for interface text (the theme sets controls in lowercase). */
+export const serviceName = (p: Platform) => PLATFORM_LABEL[p].toLowerCase();
 
 export function ConnectButton({
   platform,
@@ -64,14 +60,16 @@ export function ConnectButton({
   returnTo,
   onConnected,
   label,
-  className = "",
+  primary = false,
+  block = false,
 }: {
   platform: Platform;
   connected?: boolean;
   returnTo?: string;
   onConnected?: () => void;
   label?: string;
-  className?: string;
+  primary?: boolean;
+  block?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,35 +89,31 @@ export function ConnectButton({
   };
 
   if (connected) {
-    return (
-      <span className={`inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted ${className}`}>
-        <PlatformDot platform={platform} /> {PLATFORM_LABEL[platform]} connected
-      </span>
-    );
+    return <span className="pill pill--accent">{serviceName(platform)} connected</span>;
   }
 
-  const base = `inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium hover:brightness-110 disabled:opacity-60 ${PLATFORM_BUTTON[platform]}`;
-  const cls = `${base} ${className}`;
+  const cls = `btn${primary ? " btn--primary" : ""}${block ? " btn--block" : ""}`;
+  const text = label ?? `connect ${serviceName(platform)}`;
 
   if (platform !== "apple") {
     // Full-page navigation: the API route redirects to Spotify's or Google's sign-in screen.
     return (
       <a href={`/api/auth/${platform}/login?returnTo=${encodeURIComponent(returnTo ?? pathname)}`} className={cls}>
-        {label ?? `Connect ${PLATFORM_LABEL[platform]}`}
+        {text}
       </a>
     );
   }
 
   return (
-    <span className={`inline-flex flex-col gap-1 ${className}`}>
-      <button
-        onClick={go}
-        disabled={busy}
-        className={`${base} w-full`}
-      >
-        {busy ? "Connecting…" : (label ?? `Connect ${PLATFORM_LABEL[platform]}`)}
+    <span className="connect">
+      <button onClick={go} disabled={busy} className={cls}>
+        {busy ? "connecting…" : text}
       </button>
-      {error && <span className="text-xs text-bad">{error}</span>}
+      {error && (
+        <span className="notice" role="alert">
+          {error}
+        </span>
+      )}
     </span>
   );
 }

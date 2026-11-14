@@ -15,18 +15,6 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   youtube: "YouTube Music",
 };
 
-/** Tailwind classes per platform (kept as full literals so Tailwind can find them). */
-export const PLATFORM_DOT: Record<Platform, string> = {
-  spotify: "bg-spotify",
-  apple: "bg-apple",
-  youtube: "bg-youtube",
-};
-export const PLATFORM_BUTTON: Record<Platform, string> = {
-  spotify: "bg-spotify text-black",
-  apple: "bg-apple text-white",
-  youtube: "bg-youtube text-white",
-};
-
 /** A platform-neutral track. `ids` holds the native id on each platform we know it for. */
 export interface Track {
   title: string;

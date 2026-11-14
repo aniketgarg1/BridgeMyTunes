@@ -1,0 +1,30 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "app",
+  "shape": "app screen",
+  "theme": "ultraviolet",
+  "axes": "light/geometric-sans/cool",
+  "hero": "none (app)",
+  "nav": "top bar, wordmark and three destinations",
+  "footer": "one line: privacy, terms, not-affiliated note",
+  "imagery": "cover art only",
+  "photos": 0,
+  "entry": "record field (violet paste band)",
+  "fingerprint": "app/ultraviolet/lavender/record-field/ledger/tracks",
+  "sections": [
+   "home: record field + library grid",
+   "song: cover + service ledger",
+   "collection: cover + actions + track table",
+   "transfer: progress panel + figures + review list",
+   "switch: route + picker"
+  ],
+  "signature": "one song, three doors",
+  "waived": [
+   "23"
+  ],
+  "prompt": "a tool for sharing a song, album or playlist link with friends who use a different music app",
+  "date": "2026-11-14"
+ }
+]
