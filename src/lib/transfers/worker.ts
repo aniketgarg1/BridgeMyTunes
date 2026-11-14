@@ -3,7 +3,9 @@ import { ObjectId } from "mongodb";
 import { track } from "../analytics";
 import { collections, type TransferDoc } from "../db";
 import { matchTracks, rememberManualMatch } from "../matching/matcher";
-import { adapterFor } from "../platforms/index";
+import { houseAvailable, houseSpotify } from "../platforms/house";
+import { adapterFor, getConnection } from "../platforms/index";
+import type { MusicAdapter } from "../platforms/types";
 import { getUniversalPlaylist, syncUniversalPlaylist } from "../playlists";
 import type { MatchResult, Platform, Track, TransferSource } from "../types";
 import { PLATFORM_LABEL } from "../types";
@@ -21,11 +23,14 @@ export async function createTransfer(
 ): Promise<ObjectId> {
   const { transfers } = await collections();
   const now = new Date();
+  // Not signed in to Spotify? BridgeMyTunes' own account makes a public playlist the visitor can save.
+  const via = destination === "spotify" && !(await getConnection(userId, "spotify")) && (await houseAvailable()) ? "house" : "user";
   const doc: TransferDoc = {
     userId,
     source,
     destination,
-    mode: source.type === "liked" ? "library" : "playlist",
+    via,
+    mode: source.type === "liked" && via === "user" ? "library" : "playlist",
     status: "queued",
     total: 0,
     processed: 0,
@@ -52,6 +57,12 @@ async function readSource(userId: ObjectId, source: TransferSource): Promise<{ n
   return { name: snap.name, description: snap.description, tracks: snap.tracks };
 }
 
+/** The account that receives the songs: the visitor's own, or the house Spotify account. */
+async function destinationAdapter(t: TransferDoc): Promise<MusicAdapter> {
+  if (t.via === "house") return houseSpotify();
+  return adapterFor(t.userId, t.destination);
+}
+
 const destIds = (results: MatchResult[], dest: Platform) => {
   const seen = new Set<string>();
   const ids: string[] = [];
@@ -64,6 +75,10 @@ const destIds = (results: MatchResult[], dest: Platform) => {
   }
   return ids;
 };
+
+async function houseCopyOf(slug: string) {
+  return (await getUniversalPlaylist(slug))?.houseSpotify;
+}
 
 export async function runTransfer(id: ObjectId) {
   const { transfers } = await collections();
@@ -78,7 +93,7 @@ export async function runTransfer(id: ObjectId) {
   try {
     await set({ status: "reading" });
     await track("transfer_started", tags);
-    const dest = await adapterFor(t.userId, t.destination);
+    const dest = await destinationAdapter(t);
     const src = await readSource(t.userId, t.source);
     timings.readMs = Date.now() - started;
     await set({ status: "matching", sourceName: src.name, total: src.tracks.length });
@@ -102,6 +117,12 @@ export async function runTransfer(id: ObjectId) {
     let destUrl: string | undefined;
     if (t.mode === "library") {
       if (ids.length) await dest.saveToLibrary(ids);
+    } else if (t.via === "house" && t.source.type === "universal" && (await houseCopyOf(t.source.slug))) {
+      // Someone already added this link to Spotify: everyone shares that one public playlist.
+      const copy = (await houseCopyOf(t.source.slug))!;
+      destPlaylistId = copy.id;
+      destUrl = copy.url;
+      await (dest.addMissing ? dest.addMissing(copy.id, ids) : dest.addToPlaylist(copy.id, ids));
     } else if (t.destPlaylistId) {
       // A retry: fill the playlist the earlier attempt already created instead of making a second one.
       destPlaylistId = t.destPlaylistId;
@@ -117,9 +138,14 @@ export async function runTransfer(id: ObjectId) {
         await set({ destPlaylistId, destUrl });
         await dest.addToPlaylist(destPlaylistId, ids);
       } else {
-        const created = await dest.createPlaylist(src.name, description, ids);
+        const houseNote = "Made by BridgeMyTunes. Tap the plus to save it to your library.";
+        const created = await dest.createPlaylist(src.name, t.via === "house" ? houseNote : description, ids);
         destPlaylistId = created.id;
         destUrl = created.url;
+        if (t.via === "house" && t.source.type === "universal") {
+          const { playlists } = await collections();
+          await playlists.updateOne({ slug: t.source.slug }, { $set: { houseSpotify: { id: created.id, url: created.url } } });
+        }
       }
     }
     const written = new Set(ids);
@@ -183,7 +209,7 @@ export async function resolveTransfer(
   }
 
   if (toAdd.length) {
-    const dest = await adapterFor(userId, t.destination);
+    const dest = await destinationAdapter(t);
     if (t.mode === "library") await dest.saveToLibrary(toAdd);
     else if (t.destPlaylistId) await dest.addToPlaylist(t.destPlaylistId, toAdd);
     const added = new Set(toAdd);

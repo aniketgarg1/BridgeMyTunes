@@ -20,6 +20,8 @@ export interface MusicAdapter {
   searchText(text: string): Promise<Track[]>;
   createPlaylist(name: string, description: string, trackIds: string[]): Promise<{ id: string; url?: string }>;
   addToPlaylist(playlistId: string, trackIds: string[]): Promise<void>;
+  /** Add only songs the playlist doesn't already have (used when several people share one playlist). */
+  addMissing?(playlistId: string, trackIds: string[]): Promise<void>;
   saveToLibrary(trackIds: string[]): Promise<void>;
 }
 

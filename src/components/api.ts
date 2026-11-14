@@ -22,6 +22,8 @@ export async function api<T>(path: string, init?: RequestInit & { json?: unknown
 
 export interface Me {
   mock: boolean;
+  /** BridgeMyTunes' own Spotify account can make playlists for visitors who aren't signed in to Spotify. */
+  spotifyHouse?: boolean;
   connections: Partial<Record<Platform, { displayName?: string; storefront?: string }>>;
 }
 

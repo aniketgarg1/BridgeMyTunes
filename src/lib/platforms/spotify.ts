@@ -88,7 +88,10 @@ export class SpotifyAdapter implements MusicAdapter {
   platform = "spotify" as const;
   private meId?: string;
 
-  constructor(private accessToken: string) {}
+  constructor(
+    private accessToken: string,
+    private opts: { publicPlaylists?: boolean } = {},
+  ) {}
 
   private get<T>(path: string) {
     const url = path.startsWith("http") ? path : `${API}${path}`;
@@ -206,9 +209,23 @@ export class SpotifyAdapter implements MusicAdapter {
   }
 
   async createPlaylist(name: string, description: string, trackIds: string[]) {
-    const pl: any = await this.send("POST", "/me/playlists", { name, description, public: false });
+    const pl: any = await this.send("POST", "/me/playlists", {
+      name: name.slice(0, 100),
+      description: description.replace(/\s+/g, " ").slice(0, 300),
+      public: Boolean(this.opts.publicPlaylists),
+    });
     await this.addToPlaylist(pl.id, trackIds);
     return { id: pl.id as string, url: pl.external_urls?.spotify as string | undefined };
+  }
+
+  /** Add only the songs the playlist doesn't have yet (for reused playlists). Reading works on playlists this account owns. */
+  async addMissing(playlistId: string, trackIds: string[]) {
+    const existing = new Set<string>();
+    for (const e of await this.paginate(`/playlists/${encodeURIComponent(playlistId)}/items?limit=50`)) {
+      const id = (e.item ?? (typeof e.track === "object" ? e.track : null))?.id;
+      if (id) existing.add(id);
+    }
+    await this.addToPlaylist(playlistId, [...new Set(trackIds)].filter((id) => !existing.has(id)));
   }
 
   async addToPlaylist(playlistId: string, trackIds: string[]) {

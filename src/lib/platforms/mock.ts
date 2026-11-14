@@ -171,6 +171,11 @@ export class MockAdapter implements MusicAdapter {
     return { id, url: mockPlaylistUrl(this.platform, id) };
   }
 
+  async addMissing(playlistId: string, trackIds: string[]) {
+    const have = new Set(store._mockWrites!.get(playlistId) ?? []);
+    await this.addToPlaylist(playlistId, trackIds.filter((id) => !have.has(id)));
+  }
+
   async addToPlaylist(playlistId: string, trackIds: string[]) {
     store._mockWrites!.set(playlistId, [...(store._mockWrites!.get(playlistId) ?? []), ...trackIds]);
   }

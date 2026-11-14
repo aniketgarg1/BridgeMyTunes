@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { collections } from "@/lib/db";
 import { isPlatform, jsonError } from "@/lib/http";
+import { houseAvailable } from "@/lib/platforms/house";
 import { getConnection, NotConnectedError } from "@/lib/platforms/index";
 import { createTransfer, runTransfer } from "@/lib/transfers/worker";
 import type { TransferSource } from "@/lib/types";
@@ -25,7 +26,8 @@ export async function POST(req: Request) {
     const sources = (body.sources ?? []).map(parseSource);
     if (!sources.length || sources.length > 50) throw new Error("Pick between 1 and 50 things to transfer");
     const userId = await ensureUserId();
-    if (!(await getConnection(userId, body.destination))) throw new NotConnectedError(body.destination);
+    const viaHouse = body.destination === "spotify" && (await houseAvailable());
+    if (!viaHouse && !(await getConnection(userId, body.destination))) throw new NotConnectedError(body.destination);
     for (const s of sources) {
       if (s.type !== "universal" && !(await getConnection(userId, s.platform))) throw new NotConnectedError(s.platform);
     }

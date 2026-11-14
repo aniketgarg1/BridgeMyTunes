@@ -38,6 +38,8 @@ export interface UniversalPlaylistDoc {
   source: { platform: Platform; id: string; url?: string; catalog?: boolean; storefront?: string };
   /** "song" pages link to the track on every service; anything else is a playlist or album. */
   kind?: "song" | "collection";
+  /** The house account's public Spotify copy of this link, shared by everyone who adds it to Spotify. */
+  houseSpotify?: { id: string; url?: string };
   /** For songs: where the same recording lives on each service. */
   links?: Partial<Record<Platform, SongLink>>;
   name: string;
@@ -63,6 +65,8 @@ export interface TransferDoc {
   source: TransferSource;
   sourceName?: string;
   destination: Platform;
+  /** "house": the playlist is made in BridgeMyTunes' own Spotify account, for someone not signed in to Spotify. */
+  via?: "user" | "house";
   /** "playlist" creates a playlist; "library" saves songs to the destination library (liked songs). */
   mode: "playlist" | "library";
   status: TransferStatus;

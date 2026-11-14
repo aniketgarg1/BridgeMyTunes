@@ -32,7 +32,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <div className="wrap footer__inner">
               <Link href="/privacy">privacy</Link>
               <Link href="/terms">terms</Link>
-              <span className="footer__note">not affiliated with google, apple or spotify</span>
             </div>
           </footer>
         </div>

@@ -157,7 +157,10 @@ export function UniversalPlaylistView({
   }
 
   const minutes = Math.round(pl.tracks.reduce((a, t) => a + (t.durationMs ?? 0), 0) / 60000);
-  const destinations = PLATFORMS.filter((p) => p !== pl.source.platform);
+  // Spotify is offered when the visitor signed in to it, or when the house account can make the playlist for them.
+  const destinations = [...PLATFORMS, ...(me?.spotifyHouse || me?.connections.spotify ? (["spotify"] as Platform[]) : [])].filter(
+    (p) => p !== pl.source.platform,
+  );
   // An album repeats one album name on every row; only a playlist gets the album column.
   const oneAlbum = new Set(pl.tracks.map((t) => t.album)).size <= 1;
 
@@ -175,7 +178,7 @@ export function UniversalPlaylistView({
           <div className="share__actions">
             {destinations.map((p, i) => {
               const label = `add to ${serviceName(p)}`;
-              if (me?.connections[p]) {
+              if (me?.connections[p] || (p === "spotify" && me?.spotifyHouse)) {
                 return (
                   <button key={p} disabled={starting !== null || autoStarting} onClick={() => start(p)} className={`btn btn--lg${i === 0 ? " btn--primary" : ""}`}>
                     {starting === p || (autoStarting && autoAdd === p) ? "adding…" : label}

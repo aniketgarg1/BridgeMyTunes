@@ -11,6 +11,7 @@ export interface TransferData {
   sourceName?: string;
   destination: Platform;
   mode: "playlist" | "library";
+  via?: "user" | "house";
   status: TransferStatus;
   error?: string;
   total: number;
@@ -251,7 +252,11 @@ export function TransferView({ id }: { id: string }) {
         {t.status === "done" && (
           <div className="panel__foot">
             <p>
-              {t.mode === "library" ? `Saved ${added} songs to your ${dest} library.` : `Playlist made on ${dest} with ${added} songs.`}
+              {t.via === "house"
+                ? `Your Spotify playlist is ready with ${added} songs. Open it and tap the plus to save it to your library.`
+                : t.mode === "library"
+                  ? `Saved ${added} songs to your ${dest} library.`
+                  : `Playlist made on ${dest} with ${added} songs.`}
               {t.timings?.totalMs ? <span className="label"> Took {(t.timings.totalMs / 1000).toFixed(1)}s.</span> : null}
             </p>
             {t.destUrl && (
