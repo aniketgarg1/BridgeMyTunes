@@ -49,11 +49,9 @@ export function ShareView({ initialError }: { initialError: string | null }) {
   return (
     <div className="home">
       <section className="hero" aria-labelledby="home-title">
-        <div className="hero__head">
+        <div className="hero__in">
           <h1 id="home-title">One link. Every app.</h1>
           <p className="hero__sub">Paste a song, album or playlist. Friends open it in their own app.</p>
-        </div>
-        <div className="hero__field">
           <form
             className="paste"
             onSubmit={(e) => {
@@ -61,19 +59,24 @@ export function ShareView({ initialError }: { initialError: string | null }) {
               if (link.trim()) create(songCount > 1 ? { url: link, name: listName } : { url: link.trim() }, "url");
             }}
           >
-            <label htmlFor="music-link" className="paste__label">
+            <label htmlFor="music-link" className="visually-hidden">
               Paste a link
             </label>
-            <input
-              id="music-link"
-              name="url"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              placeholder="A link, or a list of song links"
-              autoComplete="off"
-              spellCheck={false}
-              className="field field--lg paste__input"
-            />
+            <div className="paste__bar">
+              <input
+                id="music-link"
+                name="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="Paste a song or playlist link"
+                autoComplete="off"
+                spellCheck={false}
+                className="paste__input"
+              />
+              <button disabled={!link.trim() || busy !== null} className="btn btn--primary paste__go">
+                {busy === "url" ? "Making your link…" : "Make link"}
+              </button>
+            </div>
             {songCount > 1 ? (
               <div className="paste__list">
                 <span className="paste__count">{songCount} songs found</span>
@@ -87,13 +90,10 @@ export function ShareView({ initialError }: { initialError: string | null }) {
                   onChange={(e) => setListName(e.target.value)}
                   placeholder="Name it (optional)"
                   autoComplete="off"
-                  className="field paste__input"
+                  className="paste__name"
                 />
               </div>
             ) : null}
-            <button disabled={!link.trim() || busy !== null} className="btn btn--primary btn--lg paste__go">
-              {busy === "url" ? "Making your link…" : "Make link"}
-            </button>
           </form>
           {error && (
             <p className="paste__error" role="alert">
@@ -104,7 +104,7 @@ export function ShareView({ initialError }: { initialError: string | null }) {
             {ALL_PLATFORMS.map((p) => (
               <li key={p} className="apps__item">
                 <span className="apps__logo">
-                  <ServiceLogo platform={p} size={28} />
+                  <ServiceLogo platform={p} size={20} />
                 </span>
                 {serviceName(p)}
               </li>
