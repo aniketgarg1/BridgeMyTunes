@@ -105,10 +105,3 @@ a missing song) and a separate `<db>_demo` database, so you can demo the whole f
 - **Gemini**: `GEMINI_API_KEY` from Google AI Studio. Optional.
 
 All settings are listed in [.env.example](.env.example). Deploying is in [DEPLOY.md](DEPLOY.md).
-
-## Known limits
-
-- Spotify can't be a **source** on Switch apps without a tester sign-in; pasting public playlist links works for anyone.
-- Liked songs from Spotify can only be moved by copying them in the Spotify desktop app (Cmd+A, Cmd+C) and pasting.
-- House-account Spotify playlists are public on the BridgeMyTunes account.
-- A big YouTube transfer can run out of the daily YouTube quota; "Try again" the next day picks up where it stopped.
