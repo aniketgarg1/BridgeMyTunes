@@ -66,6 +66,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   const pickFrom = (p: Platform) => {
     if (p === from) return;
     trade.measure();
+    setError(null);
     // Picking the current destination as the source flips the route.
     setRoute({ from: p, to: p === to ? from : to });
     setSelected(new Set());
@@ -73,6 +74,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   const pickTo = (p: Platform) => {
     if (p === to) return;
     trade.measure();
+    setError(null);
     setRoute({ from, to: p });
   };
   const [loaded, setLoaded] = useState<{ platform: Platform; list: PlaylistSummary[] } | null>(null);
@@ -217,7 +219,10 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
             <input
               id="move-link"
               value={pasted}
-              onChange={(e) => setPasted(e.target.value)}
+              onChange={(e) => {
+                setPasted(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder={`${serviceName(from)} playlist or album link`}
               autoComplete="off"
               spellCheck={false}
