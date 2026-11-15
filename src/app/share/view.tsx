@@ -51,7 +51,6 @@ export function ShareView({ initialError }: { initialError: string | null }) {
       <section className="hero" aria-labelledby="home-title">
         <div className="hero__in">
           <h1 id="home-title">One link. Every app.</h1>
-          <p className="hero__sub">Paste a song, album or playlist. Friends open it in their own app.</p>
           <form
             className="paste"
             onSubmit={(e) => {
