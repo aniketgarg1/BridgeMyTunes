@@ -2,7 +2,7 @@ import "server-only";
 import { collections } from "../db";
 import type { MusicAdapter } from "../platforms/types";
 import type { MatchResult, Platform, ScoredCandidate, Track } from "../types";
-import { adjudicate, aiEnabled, type AiCase } from "./gemini";
+import { adjudicate, aiEnabled, suggestSearches, type AiCase } from "./gemini";
 import { MAJOR_TAGS, parseTitle, primaryArtist } from "./normalize";
 import { AUTO_ACCEPT, CONSIDER, rankCandidates } from "./score";
 
@@ -11,11 +11,15 @@ import { AUTO_ACCEPT, CONSIDER, rankCandidates } from "./score";
  *   1. already known  – the track carries a destination id, or a confirmed mapping is cached in MongoDB
  *   2. ISRC           – exact recording lookup on the destination
  *   3. metadata       – search by title + artist, score title/artist/album/duration/version
+ *   3b. Gemini search – for songs the search missed, Gemini suggests cleaner searches (video noise removed,
+ *                      real artist, other script); the results are scored by the same rules as step 3
  *   4. Gemini         – batch-adjudicate anything that scored between CONSIDER and AUTO_ACCEPT
  *   5. user review    – whatever is still uncertain or unavailable
  */
 
 const MAX_CANDIDATES = 5;
+/** At most this many missed songs per transfer get Gemini searches (each search costs destination API quota). */
+const MAX_RESCUES = 25;
 
 const cacheKeys = (t: Track, dest: Platform) => {
   const keys = Object.entries(t.ids)
@@ -129,6 +133,48 @@ export async function matchTracks(tracks: Track[], dest: MusicAdapter, opts: Mat
     }
     await report();
   });
+
+  // 3b. Songs the search missed: Gemini suggests cleaner searches, which are scored like any other result.
+  const missed = results
+    .filter((r): r is MatchResult => r?.status === "unavailable")
+    .slice(0, MAX_RESCUES)
+    .map((r) => r.index);
+  if (aiEnabled() && missed.length) {
+    for (let b = 0; b < missed.length; b += 10) {
+      const batch = missed.slice(b, b + 10);
+      const suggestions = await suggestSearches(
+        batch.map((i) => ({ key: i, source: tracks[i] })),
+        destPlatform,
+      );
+      await pool(suggestions, 3, async ({ key: i, queries }) => {
+        const src = tracks[i];
+        let ranked = rankCandidates(src, results[i]!.candidates);
+        for (const q of queries) {
+          try {
+            ranked = rankCandidates(src, [...ranked, ...(await dest.search({ title: q.title, artist: q.artist }))]);
+          } catch (err) {
+            console.warn(`[match] Gemini search failed for "${q.title}":`, err);
+          }
+          if (ranked[0]?.score >= AUTO_ACCEPT) break;
+        }
+        const best = ranked[0];
+        if (!best || best.score < CONSIDER) return;
+        const candidates = ranked.slice(0, MAX_CANDIDATES).map(strip);
+        const r = results[i]!;
+        Object.assign(r, { match: strip(best), candidates, confidence: best.score, flags: best.breakdown.flags });
+        if (best.score >= AUTO_ACCEPT) {
+          r.status = "matched";
+          r.method = "ai";
+          r.aiReason = "Found with a cleaner search from Gemini";
+        } else {
+          r.status = "uncertain";
+          r.method = "metadata";
+          forAi.push({ key: i, source: src, candidates });
+        }
+      });
+      await report();
+    }
+  }
 
   // 4. Gemini adjudication, 8 cases per request
   if (aiEnabled() && forAi.length) {

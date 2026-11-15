@@ -20,6 +20,26 @@ export interface AiVerdict {
 
 let client: GoogleGenAI | null = null;
 
+/** The configured model first; when it's overloaded or unavailable, the lighter model answers instead. */
+const FALLBACK_MODEL = "gemini-3.5-flash-lite";
+
+type GenerateParams = Parameters<GoogleGenAI["models"]["generateContent"]>[0];
+
+async function generate(params: Omit<GenerateParams, "model">) {
+  client ??= new GoogleGenAI({ apiKey: env.geminiApiKey!, httpOptions: { timeout: 25_000 } });
+  const models = [...new Set([env.geminiModel, FALLBACK_MODEL])];
+  let last: unknown;
+  for (const model of models) {
+    try {
+      return await client.models.generateContent({ ...params, model });
+    } catch (err) {
+      last = err;
+      console.warn(`[gemini] ${model} failed, ${model === models.at(-1) ? "giving up" : "trying the next model"}:`, String(err).slice(0, 160));
+    }
+  }
+  throw last;
+}
+
 export const aiEnabled = () => Boolean(env.geminiApiKey);
 
 const fmt = (t: Track) =>
@@ -49,7 +69,6 @@ Rules:
 /** Ask Gemini to adjudicate uncertain matches, several per request. Returns [] if AI is disabled or fails. */
 export async function adjudicate(cases: AiCase[]): Promise<AiVerdict[]> {
   if (!cases.length || !env.geminiApiKey) return [];
-  client ??= new GoogleGenAI({ apiKey: env.geminiApiKey });
 
   const prompt = cases
     .map(
@@ -59,8 +78,7 @@ export async function adjudicate(cases: AiCase[]): Promise<AiVerdict[]> {
     .join("\n\n");
 
   try {
-    const res = await client.models.generateContent({
-      model: env.geminiModel,
+    const res = await generate({
       contents: prompt,
       config: {
         systemInstruction: SYSTEM,
@@ -90,6 +108,70 @@ export async function adjudicate(cases: AiCase[]): Promise<AiVerdict[]> {
     });
   } catch (err) {
     console.error("[gemini] adjudication failed:", err);
+    return [];
+  }
+}
+
+export interface QueryCase {
+  key: number;
+  source: Track;
+}
+
+export interface QuerySuggestion {
+  key: number;
+  queries: { title: string; artist: string }[];
+}
+
+const SUGGEST = `You help find songs that a music catalog search could not find.
+For each case you get a song as it appears on one service (often a messy YouTube video title) and the service to search.
+Suggest up to 2 better searches, each a clean song title and its main artist, most likely first.
+
+Rules:
+- Remove video noise: "Official Video", "Lyrics", "Audio", "HD", "4K", "Full Song", channel names, label names, hashtags, emoji, years.
+- Fix the artist when the listed one is a channel, label or uploader (e.g. "T-Series", "Topic", "VEVO") and the real artist is in the title.
+- If the title is in a non-Latin script, give the common Latin-script title too, and the other way round.
+- Keep the version words that matter: Live, Remix, Acoustic, Slowed, a featured artist.
+- Never invent a different song. If you can't tell what the song is, return no queries for that case.`;
+
+/** Ask Gemini for cleaner searches for songs the catalog search missed, several per request. [] if AI is off or fails. */
+export async function suggestSearches(cases: QueryCase[], destination: string): Promise<QuerySuggestion[]> {
+  if (!cases.length || !env.geminiApiKey) return [];
+  const prompt =
+    `Service to search: ${destination}\n\n` + cases.map((c) => `Case ${c.key}\nSong: ${fmt(c.source)}`).join("\n\n");
+  try {
+    const res = await generate({
+      contents: prompt,
+      config: {
+        systemInstruction: SUGGEST,
+        temperature: 0,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              key: { type: Type.INTEGER },
+              queries: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: { title: { type: Type.STRING }, artist: { type: Type.STRING } },
+                  required: ["title", "artist"],
+                },
+              },
+            },
+            required: ["key", "queries"],
+          },
+        },
+      },
+    });
+    const parsed = JSON.parse(res.text ?? "[]") as QuerySuggestion[];
+    const keys = new Set(cases.map((c) => c.key));
+    return parsed
+      .filter((s) => keys.has(s.key) && Array.isArray(s.queries))
+      .map((s) => ({ key: s.key, queries: s.queries.filter((q) => q?.title?.trim()).slice(0, 2) }));
+  } catch (err) {
+    console.error("[gemini] search suggestions failed:", err);
     return [];
   }
 }
