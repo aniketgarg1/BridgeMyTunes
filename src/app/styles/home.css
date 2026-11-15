@@ -1,5 +1,6 @@
 /* Hallmark · shape: app screen · genre: editorial · theme: Grid (by request: mockup C) · redesign: full · hero: white and centred, the headline over the paste bar (by request: less blue, less text) · nav: shared topbar · footer: shared footer · signature: the paste bar, the one thing on the first screen · posture: full-palette · motion by request: rise, tile stagger */
 /* Hallmark · waive 39b · the paste bar and its button stand 60px: the page's one job, set large so nobody has to hunt for it */
+/* Hallmark · waive card shadow · the floating chart covers are records on a table (option B, chosen by the user); the shadow is what lifts them off the paper */
 /* Hallmark · waive centred heads · the user asked for the paste box in the middle of the page so nobody has to look for it; the hero is one centred column on white */
 /* Home: paste a link, or pick from your library. Owned by share/view.tsx. */
 
@@ -16,6 +17,34 @@
 .hero__in > :nth-child(2) { --d: 1; } .hero__in > :nth-child(n + 3) { --d: 2; }
 .hero h1 { max-width: none; font-size: clamp(2.75rem, 5.6vw, 4.75rem); line-height: 0.95; letter-spacing: -0.045em; text-wrap: balance; }
 @keyframes home-rise { from { opacity: 0; transform: translateY(12px); } }
+
+/* option B, by request: today's chart covers float around the edges like records spread on a table.
+ * The stage bleeds to the window edges; the headline and bar sit on a soft paper panel in the middle. */
+.hero--covers {
+  --bleed: calc(var(--gutter) + max(0px, (100vw - var(--measure-app)) / 2));
+  position: relative; isolation: isolate; overflow: hidden;
+  min-height: clamp(560px, calc(100svh - 120px), 820px);
+  margin: calc(-1 * var(--space-xl)) calc(-1 * var(--bleed)) 0; padding-inline: var(--bleed);
+}
+.hero--covers .hero__in { position: relative; z-index: 2; padding: var(--space-xl); background: color-mix(in oklab, var(--color-paper) 90%, transparent); }
+.floats { position: absolute; inset: 0; z-index: 1; }
+.float {
+  position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); width: calc(var(--w) * 1px); aspect-ratio: 1;
+  padding: 0; border: 0; background: var(--color-paper-2); cursor: pointer;
+  translate: -50% -50%; rotate: calc(var(--r) * 1deg);
+  box-shadow: 0 18px 40px -18px color-mix(in oklab, var(--color-ink) 45%, transparent);
+  animation: home-arrive 900ms var(--ease-out) both, home-bob 7s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 70ms), calc(var(--i) * -0.7s);
+  transition: rotate var(--dur-long) var(--ease-out);
+}
+.float img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform var(--dur-long) var(--ease-out); }
+.float:hover, .float:focus-visible { z-index: 3; rotate: 0deg; }
+.float:hover img { transform: scale(1.06); }
+.float:active img { transform: scale(0.98); transition-duration: var(--dur-micro); }
+.float:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+.float:disabled { cursor: not-allowed; opacity: 0.45; }
+@keyframes home-arrive { from { opacity: 0; scale: 0.8; } }
+@keyframes home-bob { 50% { transform: translateY(-10px); } }
 
 /* the paste bar: a white bar with the ink button joined to it, the one thing to do on the page */
 .paste { width: 100%; display: grid; gap: var(--space-md); margin-top: var(--space-xl); --color-focus: var(--color-accent); }
@@ -89,9 +118,15 @@
 
 /* ---------- smaller screens ---------- */
 @media (max-width: 54rem) {
+  .float { width: calc(var(--w) * 0.62px); }
+  .float:nth-child(n + 9) { display: none; }
   .hero { min-height: 0; padding-block: var(--space-xl) var(--space-2xl); }
+  .hero--covers { min-height: 600px; padding-block: var(--space-2xl); }
 }
 @media (max-width: 40rem) {
+  .hero--covers { min-height: 640px; }
+  .hero--covers .hero__in { padding: var(--space-lg) var(--space-sm); }
+  .float { width: calc(var(--w) * 0.5px); }
   .home { gap: var(--space-2xl); }
   .hero { padding-bottom: 0; }
   .paste__bar { flex-direction: column; }
@@ -104,7 +139,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__in > *, .shelf__item, .paste__icon > svg, .paste__bar[data-nudge] { animation: none; }
+  .hero__in > *, .shelf__item, .paste__icon > svg, .paste__bar[data-nudge], .float { animation: none; }
   .apps[data-detect] .apps__item[data-on] { transform: none; }
   .paste__bar:focus-within { transform: none; }
   .tile__art .cover { transition: none; }

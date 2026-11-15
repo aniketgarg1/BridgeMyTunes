@@ -6,9 +6,18 @@ import { ConnectButton, serviceName } from "@/components/ConnectButton";
 import { ServiceLogo } from "@/components/ServiceLogo";
 import { Cover } from "@/components/TrackRow";
 import { parseMusicLink, parseSongLinks } from "@/lib/links";
+import type { ChartSong } from "@/lib/chart";
 import { ALL_PLATFORMS, PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
 
-export function ShareView({ initialError }: { initialError: string | null }) {
+/* Where the covers float, as % of the stage: [x, y, tilt in degrees, size in px]. Clear of the centre column.
+ * The first eight sit in the top and bottom bands, so they stay on phones too. */
+const SPOTS: [number, number, number, number][] = [
+  [6, 14, -6, 150], [30, 7, -3, 92], [70, 6, 4, 104], [88, 15, 5, 140],
+  [6, 84, -4, 132], [26, 91, 6, 98], [62, 92, -5, 92], [86, 85, 3, 150],
+  [12, 50, 5, 118], [93, 50, -5, 120],
+];
+
+export function ShareView({ initialError, covers = [] }: { initialError: string | null; covers?: ChartSong[] }) {
   const router = useRouter();
   const { me, refresh } = useMe();
   const [error, setError] = useUrlError(initialError);
@@ -61,7 +70,32 @@ export function ShareView({ initialError }: { initialError: string | null }) {
 
   return (
     <div className="home">
-      <section className="hero" aria-labelledby="home-title">
+      <section className={`hero${covers.length ? " hero--covers" : ""}`} aria-labelledby="home-title">
+        {covers.length > 0 && (
+          <div className="floats" aria-label="Try a song from today's chart">
+            {covers.slice(0, SPOTS.length).map((c, i) => {
+              const [x, y, r, w] = SPOTS[i];
+              return (
+                <button
+                  key={c.url}
+                  type="button"
+                  className="float"
+                  style={{ "--x": x, "--y": y, "--r": r, "--w": w, "--i": i } as CSSProperties}
+                  aria-label={`Try ${c.name} by ${c.artist}`}
+                  title={`${c.name}, ${c.artist}`}
+                  onClick={() => {
+                    setLink(c.url);
+                    setError(null);
+                    inputRef.current?.focus();
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.art} alt="" width={300} height={300} loading={i < 4 ? "eager" : "lazy"} />
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="hero__in">
           <h1 id="home-title">One link. Every app.</h1>
           <form
