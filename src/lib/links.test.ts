@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMusicLink, parseSongLinks } from "./links";
+import { parseMusicLink, parseSongLinks, parseCollectionLinks } from "./links";
 
 describe("parseMusicLink", () => {
   it("reads songs on every service", () => {
@@ -48,6 +48,24 @@ describe("parseSongLinks", () => {
       "spotify:0VjIjW4GlUZAMYd2vXMi3b",
       "youtube:4NRXx6U8ABQ",
       "apple:1499378613",
+    ]);
+  });
+});
+
+describe("parseCollectionLinks", () => {
+  it("finds several playlists however they are separated, without repeats", () => {
+    const text = [
+      "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=abc",
+      "https://open.spotify.com/playlist/37i9dQZF1DX4o1oenSJRJd, https://open.spotify.com/album/4yP0hdKOZPNshxUOjY0cZj",
+      "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5Mhttps://music.youtube.com/playlist?list=PLf8vzfZvL2Og",
+      "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b",
+    ].join("\n");
+    const found = parseCollectionLinks(text);
+    expect(found.map((f) => `${f.link.platform}:${f.link.id}`)).toEqual([
+      "spotify:37i9dQZF1DXcBWIGoYBM5M",
+      "spotify:37i9dQZF1DX4o1oenSJRJd",
+      "spotify:album:4yP0hdKOZPNshxUOjY0cZj",
+      "youtube:PLf8vzfZvL2Og",
     ]);
   });
 });

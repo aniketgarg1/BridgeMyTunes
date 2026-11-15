@@ -98,3 +98,23 @@ export function parseSongLinks(input: string): MusicLink[] {
       return true;
     });
 }
+
+/**
+ * Every playlist or album link in the text, in order, without repeats, each with the exact text it came from.
+ * Links may be separated by anything (spaces, new lines, commas) or glued together.
+ */
+export function parseCollectionLinks(input: string): { link: MusicLink; url: string }[] {
+  const seen = new Set<string>();
+  const out: { link: MusicLink; url: string }[] = [];
+  for (const piece of input.split(/(?=https?:\/\/)|(?=spotify:)|[\s,;]+/)) {
+    const url = piece.trim();
+    if (!url) continue;
+    const link = parseMusicLink(url);
+    if (!link || link.kind !== "collection") continue;
+    const key = `${link.platform}:${link.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ link, url });
+  }
+  return out;
+}

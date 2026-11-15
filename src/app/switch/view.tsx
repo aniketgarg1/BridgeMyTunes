@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, useMe, useUrlError } from "@/components/api";
 import { AppSwitch } from "@/components/AppSwitch";
 import { ConnectButton, serviceName } from "@/components/ConnectButton";
 import { ServiceLogo } from "@/components/ServiceLogo";
 import { Cover } from "@/components/TrackRow";
-import { parseMusicLink } from "@/lib/links";
+import { parseCollectionLinks, parseSongLinks } from "@/lib/links";
 import type { Platform, PlaylistSummary } from "@/lib/types";
 
 const LIKED = "__liked__";
@@ -122,20 +123,60 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
     }
   };
 
-  // Not signed in to the source app (Spotify sign-in is invite-only): paste a public playlist link instead.
-  // It's read the same way a shared link is, then moved like any other transfer.
+  // Not signed in to the source app (Spotify sign-in is invite-only): paste public links instead.
+  // Any number of playlist and album links, plus song links (a Spotify desktop copy of Liked Songs) as one list.
+  // Each is read the same way a shared link is, then they all move together.
   const [pasted, setPasted] = useState("");
+  const [reading, setReading] = useState<{ done: number; total: number } | null>(null);
+  const [skipped, setSkipped] = useState<{ url: string; why: string }[]>([]);
+  const pastedLists = parseCollectionLinks(pasted).filter((x) => x.link.platform === from);
+  const pastedSongs = parseSongLinks(pasted).filter((x) => x.platform === from);
+  const pastedCount = pastedLists.length + (pastedSongs.length ? 1 : 0);
+  const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
   const movePasted = async () => {
-    const found = parseMusicLink(pasted.trim());
-    if (!found || found.platform !== from) return setError(`That isn't a ${serviceName(from)} link.`);
-    if (found.kind !== "collection") return setError(`Paste a ${serviceName(from)} playlist or album link.`);
+    if (!pastedCount) return setError(`No ${serviceName(from)} playlist, album or song links in there.`);
     if (!toOk) return setError(`Connect ${serviceName(to)} first.`);
     setBusy(true);
     setError(null);
+    setSkipped([]);
+    // One job per playlist or album, and one for all the loose songs together.
+    const jobs: { url: string; name?: string }[] = pastedLists.map((x) => ({ url: x.url }));
+    if (pastedSongs.length) jobs.push({ url: pasted, name: `${from === "apple" ? "Library" : "Liked"} songs from ${serviceName(from)}` });
+    const slugs: string[] = [];
+    const failed: { url: string; why: string }[] = [];
+    let done = 0;
+    setReading({ done, total: jobs.length });
+    let next = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(3, jobs.length) }, async () => {
+        while (next < jobs.length) {
+          const job = jobs[next++];
+          try {
+            const { slug } = await api<{ slug: string }>("/api/playlists", { json: job });
+            slugs.push(slug);
+          } catch (e) {
+            failed.push({ url: job.name ?? job.url, why: e instanceof Error ? e.message : "Couldn't read it" });
+          }
+          setReading({ done: ++done, total: jobs.length });
+        }
+      }),
+    );
+    setReading(null);
     try {
-      const { slug } = await api<{ slug: string }>("/api/playlists", { json: { url: pasted.trim() } });
-      const res = await api<{ ids: string[] }>("/api/transfers", { json: { destination: to, sources: [{ type: "universal", slug }] } });
-      router.push(`/transfers/${res.ids[0]}`);
+      const ids: string[] = [];
+      for (let i = 0; i < slugs.length; i += 50) {
+        const sources = slugs.slice(i, i + 50).map((slug) => ({ type: "universal", slug }));
+        ids.push(...(await api<{ ids: string[] }>("/api/transfers", { json: { destination: to, sources } })).ids);
+      }
+      if (failed.length) {
+        // Stay here so the skipped links can be seen; the rest are already moving.
+        setSkipped(failed);
+        setBusy(false);
+        if (ids.length) setPasted("");
+        return;
+      }
+      router.push(ids.length === 1 ? `/transfers/${ids[0]}` : "/transfers");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't start the transfer");
       setBusy(false);
@@ -205,7 +246,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
 
       {me && !fromOk && (
         <section className="pick" aria-labelledby="paste-title">
-          <h2 id="paste-title">Paste a {serviceName(from)} playlist</h2>
+          <h2 id="paste-title">Paste {serviceName(from)} links</h2>
           <form
             className="move-paste"
             onSubmit={(e) => {
@@ -214,30 +255,53 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
             }}
           >
             <label htmlFor="move-link" className="visually-hidden">
-              {serviceName(from)} playlist link
+              {serviceName(from)} playlist, album or song links
             </label>
-            <input
+            <textarea
               id="move-link"
               value={pasted}
               onChange={(e) => {
                 setPasted(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder={`${serviceName(from)} playlist or album link`}
+              placeholder={`One or more ${serviceName(from)} playlist links`}
               autoComplete="off"
               spellCheck={false}
-              className="field field--lg"
+              rows={4}
+              className="field move-paste__box"
             />
-            <button disabled={busy || !pasted.trim()} className="btn btn--primary btn--lg">
-              <ServiceLogo platform={to} size={20} />
-              {busy ? "Starting…" : `Move to ${serviceName(to)}`}
-            </button>
+            <div className="move-paste__foot">
+              <span className="label" aria-live="polite">
+                {reading
+                  ? `Reading ${reading.done} of ${reading.total}…`
+                  : pastedCount
+                    ? [pastedLists.length ? plural(pastedLists.length, "playlist") : "", pastedSongs.length ? plural(pastedSongs.length, "song") : ""]
+                        .filter(Boolean)
+                        .join(" and ")
+                    : from === "spotify"
+                      ? "Public playlists, up to 100 songs each. For liked songs, select them all in the Spotify app, copy and paste here."
+                      : "Public playlists only."}
+              </span>
+              <button disabled={busy || !pastedCount} className="btn btn--primary btn--lg">
+                <ServiceLogo platform={to} size={20} />
+                {busy ? "Starting…" : `Move to ${serviceName(to)}`}
+              </button>
+            </div>
           </form>
-          <p className="label">
-            {from === "spotify"
-              ? "Public playlists only, up to 100 songs. Spotify sign-in is invite-only for now, so this is the way in."
-              : `Public playlists only. Or connect ${serviceName(from)} above to pick from your library.`}
-          </p>
+          {skipped.length > 0 && (
+            <div className="notice notice--quiet" role="status">
+              <p>
+                The rest are moving (<Link href="/transfers">see transfers</Link>). These were skipped:
+              </p>
+              <ul className="move-paste__skipped">
+                {skipped.map((x) => (
+                  <li key={x.url}>
+                    <span className="move-paste__url">{x.url}</span> {x.why}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 
