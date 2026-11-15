@@ -35,6 +35,7 @@
 .route__end .appswitch { justify-self: stretch; }
 .route__end .appswitch__opt { white-space: nowrap; padding-inline: var(--space-xs); }
 .route__wait { min-height: var(--control-h); display: inline-flex; align-items: center; }
+.route__note { min-height: var(--control-h); display: inline-flex; align-items: center; max-width: 32ch; }
 .route__swap { grid-column: 2; grid-row: 1; align-self: center; min-height: var(--control-h-lg); padding-inline: var(--space-md); }
 .route__arrows { display: inline-grid; }
 .route__arrows svg { fill: currentColor; transition: transform var(--dur-long) var(--ease-out); }

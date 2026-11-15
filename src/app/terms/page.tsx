@@ -22,8 +22,6 @@ export default function Terms() {
       </ul>
       <h2>Not affiliated</h2>
       <p>BridgeMyTunes isn&apos;t affiliated with or endorsed by Google, YouTube, Apple or Spotify.</p>
-      <h2>Contact</h2>
-      <p>contactoriginlabs@gmail.com</p>
     </article>
   );
 }

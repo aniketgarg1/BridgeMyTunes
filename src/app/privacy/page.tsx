@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Privacy Policy · BridgeMyTunes" };
 
-const CONTACT = "contactoriginlabs@gmail.com";
-
 export default function Privacy() {
   return (
     <article className="prose">
@@ -47,12 +45,10 @@ export default function Privacy() {
 
       <h2>Storage and deletion</h2>
       <p>
-        Data is stored in MongoDB Atlas and the site runs on Vercel. Email {CONTACT} to have your data deleted; we&apos;ll remove it within 30 days.
-        Shared playlist pages stay online until you ask us to remove them.
+        Data is stored in MongoDB Atlas and the site runs on Vercel. Removing access at the links above stops BridgeMyTunes from reading
+        or changing your music right away. Shared link pages stay online so the people you sent them to can still open them.
       </p>
 
-      <h2>Contact</h2>
-      <p>{CONTACT}</p>
     </article>
   );
 }

@@ -25,7 +25,7 @@ export async function createTransfer(
   const now = new Date();
   // Not signed in to Spotify? BridgeMyTunes' own account makes a public playlist the visitor can save.
   const via =
-    destination === "spotify" && source.type === "universal" && !(await getConnection(userId, "spotify")) && (await houseAvailable())
+    destination === "spotify" && !(await getConnection(userId, "spotify")) && (await houseAvailable())
       ? "house"
       : "user";
   const doc: TransferDoc = {

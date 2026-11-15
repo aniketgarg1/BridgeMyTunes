@@ -80,7 +80,9 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   const [turns, setTurns] = useState(0);
 
   const fromOk = Boolean(me?.connections[from]);
-  const toOk = Boolean(me?.connections[to]);
+  // Spotify works without a sign-in: the house account makes a public playlist and links to it.
+  const viaHouse = to === "spotify" && !me?.connections.spotify && Boolean(me?.spotifyHouse);
+  const toOk = Boolean(me?.connections[to]) || viaHouse;
 
   useEffect(() => {
     if (!fromOk) return;
@@ -153,7 +155,11 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
               disabled={busy}
             />
             {me ? (
-              <ConnectButton platform={p} connected={Boolean(me.connections[p])} onConnected={refresh} />
+              i === 1 && viaHouse ? (
+                <span className="label route__note">No sign-in needed. You get a public Spotify playlist link.</span>
+              ) : (
+                <ConnectButton platform={p} connected={Boolean(me.connections[p])} onConnected={refresh} />
+              )
             ) : (
               <span className="route__wait label">Checking…</span>
             )}
@@ -169,7 +175,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
         </button>
       </section>
 
-      {(from === "spotify" || to === "spotify") && me && !me.connections.spotify && (
+      {from === "spotify" && me && !me.connections.spotify && (
         <p className="notice notice--quiet">Spotify sign-in is invite-only for now: it works for accounts on our tester list.</p>
       )}
 
@@ -205,7 +211,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
                   </span>
                   <span className="track__main">
                     <span className="track__title">{from === "apple" ? "All library songs" : "All liked songs"}</span>
-                    <span className="track__artist">{SAVED_TO[to]}</span>
+                    <span className="track__artist">{viaHouse ? "They become one public Spotify playlist" : SAVED_TO[to]}</span>
                   </span>
                 </label>
               </li>
