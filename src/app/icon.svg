@@ -1,6 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#1f40be"/>
-  <path d="M12 42 C12 22 52 22 52 42" fill="none" stroke="#f8f7f3" stroke-width="6" stroke-linecap="square"/>
-  <path d="M6 42 H58" stroke="#f8f7f3" stroke-width="6"/>
-  <path d="M22 42 V31 M32 42 V28 M42 42 V31" stroke="#f8f7f3" stroke-width="4"/>
+  <style>.dot{fill:#1B1A1F}@media (prefers-color-scheme: dark){.dot{fill:#F8F7F3}}</style>
+  <path d="M12 40 C19 40 22.5 33 25.5 28 C28 23.5 29.6 20.5 32 20.5 C34.4 20.5 36 23.5 38.5 28 C41.5 33 45 40 52 40" fill="none" stroke="#F24B40" stroke-width="4.4"/>
+  <g fill="#F24B40">
+    <rect x="29.7" y="27" width="4.6" height="22" rx="2.3"/>
+    <rect x="23.4" y="34" width="4.2" height="12" rx="2.1"/>
+    <rect x="36.4" y="34" width="4.2" height="12" rx="2.1"/>
+  </g>
+  <circle class="dot" cx="7" cy="40" r="6.5"/><circle class="dot" cx="57" cy="40" r="6.5"/>
 </svg>

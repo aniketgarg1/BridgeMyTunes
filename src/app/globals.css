@@ -18,13 +18,18 @@
 .wrap { width: 100%; max-width: var(--measure-app); margin-inline: auto; padding-inline: var(--gutter); }
 .topbar__inner { display: flex; align-items: center; gap: var(--space-lg); min-height: 80px; }
 .wordmark { font: 700 var(--text-lg)/1 var(--font-display); letter-spacing: -0.02em; text-decoration: none; margin-right: auto; white-space: nowrap; transition: color var(--dur-short) var(--ease-out); }
-.wordmark { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.wordmark { display: inline-flex; align-items: center; gap: var(--space-sm); }
 .wordmark:hover { color: var(--color-mark); }
-.mark { flex: none; }
-.mark__bg { fill: var(--color-accent); }
-.mark__line { stroke: var(--color-paper); }
-.mark .mark__line path:first-child { transform-origin: 32px 42px; transition: transform var(--dur-long) var(--ease-out); }
-.wordmark:hover .mark__line path:first-child { transform: scaleY(1.12); }
+.mark { flex: none; overflow: visible; }
+.mark__line { stroke: var(--color-logo); }
+.mark__bars { fill: var(--color-logo); }
+.mark__dots { fill: var(--color-ink); }
+/* on hover the sound bars play like a level meter */
+.mark__bars rect { transform-box: fill-box; transform-origin: center; }
+.wordmark:hover .mark__bars rect { animation: mark-level 700ms var(--ease-out) both; }
+.wordmark:hover .mark__bars rect:nth-child(2), .wordmark:hover .mark__bars rect:nth-child(4) { animation-delay: 80ms; }
+.wordmark:hover .mark__bars rect:nth-child(3) { animation-delay: 160ms; }
+@keyframes mark-level { 40% { transform: scaleY(0.55); } 70% { transform: scaleY(1.12); } }
 .nav { display: flex; gap: var(--space-lg); }
 .nav a {
   display: inline-flex; align-items: center; min-height: var(--hit);

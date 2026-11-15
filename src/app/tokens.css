@@ -15,6 +15,7 @@
   --color-accent-ink: oklch(97.5% 0.005 90); --color-focus: oklch(46% 0.2 266);
   --color-mark: oklch(57% 0.215 29); --color-mark-deep: oklch(50% 0.2 29); --color-mark-ink: oklch(97.5% 0.005 90);
   --color-field: oklch(44% 0.2 266); --color-field-ink: oklch(97.5% 0.005 90); --color-field-soft: oklch(97.5% 0.005 90 / 0.72); --color-field-deep: oklch(36% 0.18 266);
+  --color-logo: #F24B40;
   --brand-spotify: #1ED760; --brand-apple: #FA243C; --brand-youtube: #FF0000;
   --font-display: var(--font-rcbig), "Radio Canada Big", ui-sans-serif, system-ui, sans-serif; --font-body: var(--font-rc), "Radio Canada", ui-sans-serif, system-ui, sans-serif;
   --font-outlier: var(--font-body);
