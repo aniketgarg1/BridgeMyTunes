@@ -6,7 +6,7 @@ import { ConnectButton, serviceName } from "@/components/ConnectButton";
 import { ServiceLogo } from "@/components/ServiceLogo";
 import { Cover } from "@/components/TrackRow";
 import { parseMusicLink, parseSongLinks } from "@/lib/links";
-import type { ChartSong } from "@/lib/chart";
+import type { CoverSong } from "@/lib/covers";
 import { ALL_PLATFORMS, PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
 
 /* Where the covers float, as % of the stage: [x, y, tilt in degrees, size in px]. Clear of the centre column.
@@ -17,7 +17,7 @@ const SPOTS: [number, number, number, number][] = [
   [12, 50, 5, 118], [93, 50, -5, 120],
 ];
 
-export function ShareView({ initialError, covers = [] }: { initialError: string | null; covers?: ChartSong[] }) {
+export function ShareView({ initialError, covers = [] }: { initialError: string | null; covers?: CoverSong[] }) {
   const router = useRouter();
   const { me, refresh } = useMe();
   const [error, setError] = useUrlError(initialError);
@@ -72,7 +72,7 @@ export function ShareView({ initialError, covers = [] }: { initialError: string 
     <div className="home">
       <section className={`hero${covers.length ? " hero--covers" : ""}`} aria-labelledby="home-title">
         {covers.length > 0 && (
-          <div className="floats" aria-label="Try a song from today's chart">
+          <div className="floats" aria-label="Try a song">
             {covers.slice(0, SPOTS.length).map((c, i) => {
               const [x, y, r, w] = SPOTS[i];
               return (

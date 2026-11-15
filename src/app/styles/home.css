@@ -18,7 +18,7 @@
 .hero h1 { max-width: none; font-size: clamp(2.75rem, 5.6vw, 4.75rem); line-height: 0.95; letter-spacing: -0.045em; text-wrap: balance; }
 @keyframes home-rise { from { opacity: 0; transform: translateY(12px); } }
 
-/* option B, by request: today's chart covers float around the edges like records spread on a table.
+/* option B, by request: album covers (artwork, no photos of people) float around the edges like records spread on a table.
  * The stage bleeds to the window edges; the headline and bar sit on a soft paper panel in the middle. */
 .hero--covers {
   --bleed: calc(var(--gutter) + max(0px, (100vw - var(--measure-app)) / 2));
