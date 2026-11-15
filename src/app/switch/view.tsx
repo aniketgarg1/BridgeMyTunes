@@ -13,6 +13,8 @@ import type { Platform, PlaylistSummary } from "@/lib/types";
 const LIKED = "__liked__";
 /** Every app can be either end. Spotify sign-in only works for testers on the developer app's allowlist. */
 const APPS: Platform[] = ["youtube", "apple", "spotify"];
+/** Spotify can't be a source: reading someone's Spotify library needs a sign-in, and that's limited to Spotify's tester list. */
+const FROM_APPS: Platform[] = ["youtube", "apple"];
 /** Where "all your saved songs" end up on each destination, in that app's own words. */
 const SAVED_TO: Record<Platform, string> = {
   youtube: "Each song is liked, so it lands in Liked music on YouTube Music",
@@ -212,7 +214,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
               <span>{serviceName(p)}</span>
             </span>
             <AppSwitch
-              options={i === 0 ? APPS : APPS.filter((a) => a !== from)}
+              options={i === 0 ? FROM_APPS : APPS.filter((a) => a !== from)}
               value={p}
               onChange={i === 0 ? pickFrom : pickTo}
               label={i === 0 ? "Move from" : "Move to"}
@@ -234,7 +236,13 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
             )}
           </div>
         ))}
-        <button type="button" onClick={swap} aria-label={`Swap: move from ${serviceName(to)} to ${serviceName(from)}`} className="btn route__swap">
+        <button
+          type="button"
+          onClick={swap}
+          disabled={!FROM_APPS.includes(to)}
+          aria-label={`Swap: move from ${serviceName(to)} to ${serviceName(from)}`}
+          className="btn route__swap"
+        >
           <span className="route__arrows" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="20" height="20" style={{ transform: `rotate(${turns * 180}deg)` }}>
               <path d="M16 3l5 5-5 5-1.4-1.4L17.2 9H4V7h13.2l-2.6-2.6zM8 11l1.4 1.4L6.8 15H20v2H6.8l2.6 2.6L8 21l-5-5z" />
