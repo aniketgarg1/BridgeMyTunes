@@ -32,16 +32,6 @@ export function ShareView({ initialError }: { initialError: string | null }) {
     inputRef.current?.focus();
     setNudge((n) => n + 1);
   };
-  const pasteFromClipboard = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text.trim()) setLink(text.trim());
-      inputRef.current?.focus();
-    } catch {
-      // The browser said no (or has no clipboard access): the field is focused, so Cmd+V works.
-      pointAtField();
-    }
-  };
 
   const connected = Boolean(me?.connections[platform]);
   const playlists = loaded?.platform === platform ? loaded.list : null;
@@ -107,11 +97,6 @@ export function ShareView({ initialError }: { initialError: string | null }) {
                   spellCheck={false}
                   className="paste__input"
                 />
-                {!link && (
-                  <button type="button" className="paste__clip" onClick={pasteFromClipboard}>
-                    Paste
-                  </button>
-                )}
               </div>
               <button disabled={busy !== null} className="btn btn--primary paste__go">
                 {busy === "url" ? "Making your link…" : "Make link"}
