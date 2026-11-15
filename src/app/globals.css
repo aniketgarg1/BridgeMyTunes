@@ -80,6 +80,8 @@
 
 .pill { display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: var(--space-lg); padding-inline: var(--space-xs); border-radius: 0; font: 500 var(--text-xs)/1 var(--font-body); color: var(--color-ink-2); background: var(--color-paper-2); white-space: nowrap; }
 .pill--accent { color: var(--color-accent-ink); background: var(--color-accent); }
+/* green means it worked: a connected app, a finished transfer */
+.pill--success { color: var(--color-paper); background: var(--color-success); }
 
 .tabs { display: inline-flex; gap: 0; background: var(--color-paper-2); }
 .tab {

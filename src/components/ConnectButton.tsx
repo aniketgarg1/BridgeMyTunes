@@ -91,7 +91,7 @@ export function ConnectButton({
 
   if (connected) {
     return (
-      <span className="pill pill--accent connected">
+      <span className="pill pill--success connected">
         <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
           <path d="M6.2 11.6 2.6 8l1.1-1.1 2.5 2.5 6.1-6.1 1.1 1.1z" />
         </svg>

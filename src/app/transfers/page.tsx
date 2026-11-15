@@ -61,7 +61,7 @@ export default function TransfersPage() {
                       From {from} to {serviceName(t.destination)}, {when}
                     </span>
                   </span>
-                  <span className={`pill${t.status === "done" ? " pill--accent" : ""}`}>
+                  <span className={`pill${t.status === "done" ? " pill--success" : ""}`}>
                     {t.status === "done" ? "Done" : t.status === "failed" ? "Stopped" : `${pct}%`}
                   </span>
                 </Link>
