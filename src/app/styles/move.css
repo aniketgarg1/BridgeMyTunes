@@ -32,6 +32,8 @@
 .route__name { display: flex; align-items: center; gap: var(--space-md); min-width: 0; font: var(--display-weight) clamp(2rem, 3.4vw, 3rem)/1 var(--font-display); letter-spacing: var(--tracking-display); }
 .route__name .logo { width: 1.15em; height: 1.15em; }
 .route__name > span { min-width: 0; overflow-wrap: break-word; }
+.route__end .appswitch { justify-self: stretch; }
+.route__end .appswitch__opt { white-space: nowrap; padding-inline: var(--space-xs); }
 .route__wait { min-height: var(--control-h); display: inline-flex; align-items: center; }
 .route__swap { grid-column: 2; grid-row: 1; align-self: center; min-height: var(--control-h-lg); padding-inline: var(--space-md); }
 .route__arrows { display: inline-grid; }

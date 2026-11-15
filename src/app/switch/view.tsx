@@ -2,12 +2,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, useMe, useUrlError } from "@/components/api";
+import { AppSwitch } from "@/components/AppSwitch";
 import { ConnectButton, serviceName } from "@/components/ConnectButton";
 import { ServiceLogo } from "@/components/ServiceLogo";
 import { Cover } from "@/components/TrackRow";
-import { PLATFORMS, type Platform, type PlaylistSummary } from "@/lib/types";
+import type { Platform, PlaylistSummary } from "@/lib/types";
 
 const LIKED = "__liked__";
+/** Every app can be either end. Spotify sign-in only works for testers on the developer app's allowlist. */
+const APPS: Platform[] = ["youtube", "apple", "spotify"];
 /** Where "all your saved songs" end up on each destination, in that app's own words. */
 const SAVED_TO: Record<Platform, string> = {
   youtube: "Each song is liked, so it lands in Liked music on YouTube Music",
@@ -56,13 +59,25 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   const router = useRouter();
   const { me, refresh } = useMe();
   const [error, setError] = useUrlError(initialError);
-  const [from, setFrom] = useState<Platform>(PLATFORMS[0]);
-  const to: Platform = PLATFORMS.find((p) => p !== from) ?? PLATFORMS[1];
+  const [route, setRoute] = useState<{ from: Platform; to: Platform }>({ from: "youtube", to: "apple" });
+  const { from, to } = route;
+  const trade = useTradePlaces(`${from}>${to}`);
+  const pickFrom = (p: Platform) => {
+    if (p === from) return;
+    trade.measure();
+    // Picking the current destination as the source flips the route.
+    setRoute({ from: p, to: p === to ? from : to });
+    setSelected(new Set());
+  };
+  const pickTo = (p: Platform) => {
+    if (p === to) return;
+    trade.measure();
+    setRoute({ from, to: p });
+  };
   const [loaded, setLoaded] = useState<{ platform: Platform; list: PlaylistSummary[] } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [turns, setTurns] = useState(0);
-  const trade = useTradePlaces(from);
 
   const fromOk = Boolean(me?.connections[from]);
   const toOk = Boolean(me?.connections[to]);
@@ -105,7 +120,7 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
   const swap = () => {
     trade.measure();
     setTurns((n) => n + 1);
-    setFrom(to);
+    setRoute({ from: to, to: from });
     setSelected(new Set());
   };
 
@@ -130,6 +145,13 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
               <ServiceLogo platform={p} size={48} />
               <span>{serviceName(p)}</span>
             </span>
+            <AppSwitch
+              options={i === 0 ? APPS : APPS.filter((a) => a !== from)}
+              value={p}
+              onChange={i === 0 ? pickFrom : pickTo}
+              label={i === 0 ? "Move from" : "Move to"}
+              disabled={busy}
+            />
             {me ? (
               <ConnectButton platform={p} connected={Boolean(me.connections[p])} onConnected={refresh} />
             ) : (
@@ -146,6 +168,10 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
           <span>Swap</span>
         </button>
       </section>
+
+      {(from === "spotify" || to === "spotify") && me && !me.connections.spotify && (
+        <p className="notice notice--quiet">Spotify sign-in is invite-only for now: it works for accounts on our tester list.</p>
+      )}
 
       {me && !fromOk && <p className="label">Connect {serviceName(from)} to see your playlists.</p>}
 

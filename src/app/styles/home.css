@@ -18,9 +18,9 @@
 .hero__field {
   --bleed: calc(var(--gutter) + max(0px, (100vw - var(--measure-app)) / 2));
   --color-focus: var(--color-field-ink);
-  grid-column: 7 / 13; position: relative; isolation: isolate; display: flex; flex-direction: column; min-width: 0;
+  grid-column: 7 / 13; position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: center; min-width: 0;
   margin-right: calc(-1 * var(--bleed));
-  padding: var(--space-3xl) calc(var(--space-xl) + var(--bleed)) var(--space-2xl) var(--space-xl);
+  padding: var(--space-2xl) calc(var(--space-xl) + var(--bleed)) var(--space-2xl) var(--space-xl);
   background: var(--color-field); color: var(--color-field-ink);
 }
 /* the wipe: a paper sheet over the field shrinks to the right, so the ultramarine runs in from the left */
@@ -53,8 +53,8 @@
   animation: home-rise var(--dur-short) var(--ease-out) both;
 }
 
-/* the three apps at the foot of the field */
-.apps { list-style: none; margin: auto 0 0; padding: var(--space-2xl) 0 0; display: grid; gap: var(--space-sm); }
+/* the three apps under the paste control; the pair sits centred in the field, level with the headline */
+.apps { list-style: none; margin: var(--space-2xl) 0 0; padding: 0; display: grid; gap: var(--space-sm); }
 .apps__item {
   display: flex; align-items: center; gap: var(--space-md);
   font: 700 var(--text-2xl)/1 var(--font-display); letter-spacing: -0.03em; white-space: nowrap;

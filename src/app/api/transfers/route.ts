@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     const sources = (body.sources ?? []).map(parseSource);
     if (!sources.length || sources.length > 50) throw new Error("Pick between 1 and 50 things to transfer");
     const userId = await ensureUserId();
-    const viaHouse = body.destination === "spotify" && (await houseAvailable());
+    // The house account only makes public playlists of shared links, never someone's own library or playlists.
+    const viaHouse = body.destination === "spotify" && sources.every((s) => s.type === "universal") && (await houseAvailable());
     if (!viaHouse && !(await getConnection(userId, body.destination))) throw new NotConnectedError(body.destination);
     for (const s of sources) {
       if (s.type !== "universal" && !(await getConnection(userId, s.platform))) throw new NotConnectedError(s.platform);
