@@ -30,7 +30,12 @@ About 15 minutes. This is a Next.js app, so Vercel builds it straight from this 
 | `APPLE_TEAM_ID` | Apple Developer → Membership | For Apple Music |
 | `APPLE_KEY_ID` | ID of the MusicKit key | For Apple Music |
 | `APPLE_PRIVATE_KEY` | Whole `.p8` file, including BEGIN/END lines | For Apple Music |
+| `YOUTUBE_API_KEY` | Google Cloud → YouTube Data API v3 → API key | For YouTube Music |
+| `GOOGLE_CLIENT_ID` | Google Cloud → OAuth client (web) | For YouTube Music sign-in |
+| `GOOGLE_CLIENT_SECRET` | Same OAuth client | For YouTube Music sign-in |
+| `ADMIN_KEY` | Any long random string; guards the house-account setup | For the Spotify house account |
 | `GEMINI_API_KEY` | https://aistudio.google.com/apikey | Optional |
+| `SPOTIFY_HOUSE_DISABLED` / `SPOTIFY_EMBED_DISABLED` | `1` switches that feature off | Optional |
 | `APP_URL` | Only for a custom domain, e.g. `https://bridgemytunes.com`. Otherwise the Vercel address is used automatically. | Optional |
 
 Never commit these values to GitHub.
