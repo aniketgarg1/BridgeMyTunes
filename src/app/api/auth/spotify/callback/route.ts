@@ -43,6 +43,6 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("[spotify callback]", err);
     // Dev-mode apps reject users who aren't on the app's allowlist with a 403 here.
-    return back("Couldn't connect Spotify. If this app is in Development Mode, your account must be added under User Management.");
+    return back("Spotify sign-in is invite-only for now, and this Spotify account isn't on our tester list yet. Send us the email you use for Spotify and we'll add it.");
   }
 }
