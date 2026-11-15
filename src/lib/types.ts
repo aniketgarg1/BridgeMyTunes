@@ -76,6 +76,15 @@ export interface MatchResult {
   added: boolean;
   /** User skipped this track during review. */
   skipped?: boolean;
+  /** For a song that isn't on the destination: similar songs that are, suggested by Gemini. */
+  replacements?: Replacement[];
+  /** The user added one of the replacements instead of the original song. */
+  replaced?: boolean;
+}
+
+/** A similar song that is on the destination, with Gemini's short reason for suggesting it. */
+export interface Replacement extends Track {
+  why: string;
 }
 
 export type TransferSource =

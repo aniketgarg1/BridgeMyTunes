@@ -1,8 +1,8 @@
 import "server-only";
 import { collections } from "../db";
 import type { MusicAdapter } from "../platforms/types";
-import type { MatchResult, Platform, ScoredCandidate, Track } from "../types";
-import { adjudicate, aiEnabled, suggestSearches, type AiCase } from "./gemini";
+import type { MatchResult, Platform, Replacement, ScoredCandidate, Track } from "../types";
+import { adjudicate, aiEnabled, suggestReplacements, suggestSearches, type AiCase } from "./gemini";
 import { MAJOR_TAGS, parseTitle, primaryArtist } from "./normalize";
 import { AUTO_ACCEPT, CONSIDER, rankCandidates } from "./score";
 
@@ -14,12 +14,17 @@ import { AUTO_ACCEPT, CONSIDER, rankCandidates } from "./score";
  *   3b. Gemini search – for songs the search missed, Gemini suggests cleaner searches (video noise removed,
  *                      real artist, other script); the results are scored by the same rules as step 3
  *   4. Gemini         – batch-adjudicate anything that scored between CONSIDER and AUTO_ACCEPT
+ *   4b. replacements  – for songs that still aren't there, Gemini suggests up to 3 similar songs, each confirmed to
+ *                      exist on the destination by a search; the user can add one instead on the review screen
  *   5. user review    – whatever is still uncertain or unavailable
  */
 
 const MAX_CANDIDATES = 5;
 /** At most this many missed songs per transfer get Gemini searches (each search costs destination API quota). */
 const MAX_RESCUES = 25;
+/** At most this many missing songs per transfer get replacement suggestions, at most 2 offered each (quota again). */
+const MAX_REPLACED = 10;
+const REPLACEMENTS_EACH = 2;
 
 const cacheKeys = (t: Track, dest: Platform) => {
   const keys = Object.entries(t.ids)
@@ -205,6 +210,36 @@ export async function matchTracks(tracks: Track[], dest: MusicAdapter, opts: Mat
       }
       await report();
     }
+  }
+
+  // 4b. Still missing: offer similar songs that do exist on the destination. Suggestions only; nothing is added.
+  const stillMissing = results
+    .filter((r): r is MatchResult => r?.status === "unavailable")
+    .slice(0, MAX_REPLACED)
+    .map((r) => r.index);
+  if (aiEnabled() && stillMissing.length) {
+    const ideas = await suggestReplacements(
+      stillMissing.map((i) => ({ key: i, source: tracks[i] })),
+      destPlatform,
+    );
+    await pool(ideas, 3, async ({ key: i, songs }) => {
+      const found: Replacement[] = [];
+      for (const idea of songs) {
+        if (found.length >= REPLACEMENTS_EACH) break;
+        try {
+          const want: Track = { title: idea.title, artists: [idea.artist], ids: {} };
+          const best = rankCandidates(want, await dest.search({ title: idea.title, artist: idea.artist }))[0];
+          // Only offer it if the destination really has that song (good title and artist match).
+          if (best && best.score >= 0.8 && !found.some((f) => f.ids[destPlatform] === best.ids[destPlatform])) {
+            found.push({ ...strip(best), why: idea.why });
+          }
+        } catch (err) {
+          console.warn(`[match] replacement search failed for "${idea.title}":`, err);
+        }
+      }
+      if (found.length) results[i]!.replacements = found;
+    });
+    await report();
   }
 
   const final = results as MatchResult[];

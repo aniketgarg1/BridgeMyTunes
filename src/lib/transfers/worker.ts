@@ -185,7 +185,7 @@ export async function runTransfer(id: ObjectId) {
 export async function resolveTransfer(
   userId: ObjectId,
   id: ObjectId,
-  decisions: { index: number; track: Track | null }[],
+  decisions: { index: number; track: Track | null; replacement?: boolean }[],
 ) {
   const { transfers } = await collections();
   const t = await transfers.findOne({ _id: id, userId });
@@ -208,7 +208,14 @@ export async function resolveTransfer(
     r.confidence = 1;
     r.skipped = false;
     toAdd.push(destId);
-    await rememberManualMatch(r.source, t.destination, d.track);
+    if (d.replacement) {
+      // A different song chosen in place of a missing one: not the same recording, so never cached as its match.
+      r.replaced = true;
+      r.flags = ["Similar song instead"];
+    } else {
+      r.replaced = false;
+      await rememberManualMatch(r.source, t.destination, d.track);
+    }
   }
 
   if (toAdd.length) {

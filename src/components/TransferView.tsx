@@ -67,7 +67,7 @@ function ReviewItem({
 }: {
   r: MatchResult;
   destination: Platform;
-  onDecide: (track: Track | null) => Promise<void>;
+  onDecide: (track: Track | null, replacement?: boolean) => Promise<void>;
 }) {
   // Only preselect a suggestion when it's plausibly right; for "not found" make the user choose.
   const [choice, setChoice] = useState<number>(r.status === "uncertain" && r.candidates.length ? 0 : -1);
@@ -77,10 +77,10 @@ function ReviewItem({
   const options = results ?? r.candidates;
   const searchId = `search-${r.index}`;
 
-  const decide = async (t: Track | null) => {
+  const decide = async (t: Track | null, replacement = false) => {
     setBusy(true);
     try {
-      await onDecide(t);
+      await onDecide(t, replacement);
     } finally {
       setBusy(false);
     }
@@ -102,6 +102,26 @@ function ReviewItem({
       </div>
 
       <div className="review__pick">
+        {r.status === "unavailable" && r.replacements?.length ? (
+          <div className="replace">
+            <p className="label">Not on {serviceName(destination)}. Gemini suggests a similar song instead:</p>
+            <ul className="replace__list">
+              {r.replacements.map((x) => (
+                <li key={x.ids[destination] ?? x.title} className="replace__row">
+                  <Cover src={x.artworkUrl} title={x.title} />
+                  <span className="track__main">
+                    <span className="track__title">{x.title}</span>
+                    <span className="track__artist">{x.artists.join(", ")}</span>
+                    <span className="replace__why">{x.why}</span>
+                  </span>
+                  <button type="button" disabled={busy} onClick={() => decide(x, true)} className="btn">
+                    Add instead
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <fieldset className="choices">
           <legend className="label">
             {results ? "Search results" : options.length ? `Closest on ${serviceName(destination)}` : `Nothing close on ${serviceName(destination)}`}
@@ -187,7 +207,7 @@ export function TransferView({ id }: { id: string }) {
     };
   }, [t]);
 
-  const resolve = async (decisions: { index: number; track: Track | null }[]) => {
+  const resolve = async (decisions: { index: number; track: Track | null; replacement?: boolean }[]) => {
     const { results } = await api<{ results: MatchResult[] }>(`/api/transfers/${id}/resolve`, { json: { decisions } });
     setT((prev) => (prev ? { ...prev, results } : prev));
   };
@@ -341,7 +361,7 @@ export function TransferView({ id }: { id: string }) {
             ) : (
               <ul className="review rows" role="list">
                 {groups.review.map((r) => (
-                  <ReviewItem key={r.index} r={r} destination={t.destination} onDecide={(track) => resolve([{ index: r.index, track }])} />
+                  <ReviewItem key={r.index} r={r} destination={t.destination} onDecide={(track, replacement) => resolve([{ index: r.index, track, replacement }])} />
                 ))}
               </ul>
             )

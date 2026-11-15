@@ -175,3 +175,61 @@ export async function suggestSearches(cases: QueryCase[], destination: string): 
     return [];
   }
 }
+
+export interface ReplacementIdea {
+  key: number;
+  songs: { title: string; artist: string; why: string }[];
+}
+
+const REPLACE = `A listener is moving music to another streaming service, and some songs are not available there.
+For each missing song, suggest up to 3 real, well-known songs a fan of it would accept instead, most fitting first:
+another version of the same song (a different recording, a live or acoustic version, a cover by a known artist) when one
+likely exists, otherwise a closely related song by the same artist, otherwise a very similar song by a similar artist.
+
+Rules:
+- Only real songs that are widely released on major streaming services. Never invent titles.
+- Never suggest the exact same recording that was already searched for.
+- why: a few words a listener understands, e.g. "Acoustic version", "Same artist, same album", "Similar 2000s Hindi pop".`;
+
+/** Ask Gemini for similar songs to offer instead of ones the destination doesn't have. [] if AI is off or fails. */
+export async function suggestReplacements(cases: QueryCase[], destination: string): Promise<ReplacementIdea[]> {
+  if (!cases.length || !env.geminiApiKey) return [];
+  const prompt =
+    `Destination service: ${destination}\n\n` + cases.map((c) => `Case ${c.key}\nMissing song: ${fmt(c.source)}`).join("\n\n");
+  try {
+    const res = await generate({
+      contents: prompt,
+      config: {
+        systemInstruction: REPLACE,
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              key: { type: Type.INTEGER },
+              songs: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: { title: { type: Type.STRING }, artist: { type: Type.STRING }, why: { type: Type.STRING } },
+                  required: ["title", "artist", "why"],
+                },
+              },
+            },
+            required: ["key", "songs"],
+          },
+        },
+      },
+    });
+    const parsed = JSON.parse(res.text ?? "[]") as ReplacementIdea[];
+    const keys = new Set(cases.map((c) => c.key));
+    return parsed
+      .filter((r) => keys.has(r.key) && Array.isArray(r.songs))
+      .map((r) => ({ key: r.key, songs: r.songs.filter((x) => x?.title?.trim() && x?.artist?.trim()).slice(0, 3) }));
+  } catch (err) {
+    console.error("[gemini] replacement suggestions failed:", err);
+    return [];
+  }
+}

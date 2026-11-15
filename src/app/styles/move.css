@@ -144,3 +144,13 @@
 ul.list, ul.picker, ul.review { list-style: none; margin: 0; padding: 0; }
 
 @media (max-width: 40rem) { .move-paste__foot .btn { width: 100%; } }
+
+/* Gemini's similar songs for one that isn't on the destination */
+.replace { display: grid; gap: var(--space-xs); padding: var(--space-md); background: var(--color-paper); box-shadow: inset 4px 0 0 var(--color-accent); }
+.replace__list { list-style: none; margin: 0; padding: 0; display: grid; }
+.replace__row { display: grid; grid-template-columns: var(--cover-sm) minmax(0, 1fr) auto; gap: var(--space-sm); align-items: center; padding-block: var(--space-xs); border-top: var(--rule-hair) solid var(--color-rule); animation: replace-in var(--dur-long) var(--ease-out) both; }
+.replace__row:nth-child(2) { animation-delay: 80ms; }
+.replace__why { font-size: var(--text-sm); color: var(--color-accent); }
+@keyframes replace-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .replace__row { animation: none; } }
+@media (max-width: 40rem) { .replace__row { grid-template-columns: var(--cover-sm) minmax(0, 1fr); } .replace__row .btn { grid-column: 1 / -1; } }

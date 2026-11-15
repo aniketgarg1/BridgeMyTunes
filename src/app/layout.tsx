@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Radio_Canada, Radio_Canada_Big } from "next/font/google";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <header className="topbar">
             <div className="wrap topbar__inner">
               <Link href="/" className="wordmark">
+                <Logo />
                 BridgeMyTunes
               </Link>
               <Nav />
