@@ -139,6 +139,7 @@
 @media (max-width: 40rem) {
   .nav { gap: var(--space-sm); }
   .topbar__inner { min-height: var(--space-2xl); gap: var(--space-sm); }
-  .wordmark { font-size: var(--text-md); }
+  .wordmark { font-size: var(--text-md); gap: var(--space-xs); }
+  .wordmark .mark { height: 16px; width: auto; }
   .nav a { font-size: var(--text-xs); }
 }

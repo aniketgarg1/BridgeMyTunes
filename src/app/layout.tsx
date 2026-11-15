@@ -33,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <footer className="footer">
             <div className="wrap footer__inner">
               <span>BridgeMyTunes</span>
+              <Link href="/about">About</Link>
               <Link href="/privacy">Privacy</Link>
               <Link href="/terms">Terms</Link>
             </div>
