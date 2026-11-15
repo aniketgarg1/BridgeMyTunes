@@ -35,6 +35,8 @@
 .route__end .appswitch { justify-self: stretch; }
 .route__end .appswitch__opt { white-space: nowrap; padding-inline: var(--space-xs); }
 .route__wait { min-height: var(--control-h); display: inline-flex; align-items: center; }
+.move-paste { display: flex; gap: var(--space-sm); align-items: stretch; margin-block: var(--space-md) var(--space-sm); }
+.move-paste .field { flex: 1; }
 .route__note { min-height: var(--control-h); display: inline-flex; align-items: center; max-width: 32ch; }
 .route__swap { grid-column: 2; grid-row: 1; align-self: center; min-height: var(--control-h-lg); padding-inline: var(--space-md); }
 .route__arrows { display: inline-grid; }
@@ -135,3 +137,5 @@
   .progress__bar, .route__arrows svg { transition: none; }
 }
 ul.list, ul.picker, ul.review { list-style: none; margin: 0; padding: 0; }
+
+@media (max-width: 40rem) { .move-paste { flex-direction: column; } }

@@ -6,6 +6,7 @@ import { AppSwitch } from "@/components/AppSwitch";
 import { ConnectButton, serviceName } from "@/components/ConnectButton";
 import { ServiceLogo } from "@/components/ServiceLogo";
 import { Cover } from "@/components/TrackRow";
+import { parseMusicLink } from "@/lib/links";
 import type { Platform, PlaylistSummary } from "@/lib/types";
 
 const LIKED = "__liked__";
@@ -119,6 +120,26 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
     }
   };
 
+  // Not signed in to the source app (Spotify sign-in is invite-only): paste a public playlist link instead.
+  // It's read the same way a shared link is, then moved like any other transfer.
+  const [pasted, setPasted] = useState("");
+  const movePasted = async () => {
+    const found = parseMusicLink(pasted.trim());
+    if (!found || found.platform !== from) return setError(`That isn't a ${serviceName(from)} link.`);
+    if (found.kind !== "collection") return setError(`Paste a ${serviceName(from)} playlist or album link.`);
+    if (!toOk) return setError(`Connect ${serviceName(to)} first.`);
+    setBusy(true);
+    setError(null);
+    try {
+      const { slug } = await api<{ slug: string }>("/api/playlists", { json: { url: pasted.trim() } });
+      const res = await api<{ ids: string[] }>("/api/transfers", { json: { destination: to, sources: [{ type: "universal", slug }] } });
+      router.push(`/transfers/${res.ids[0]}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't start the transfer");
+      setBusy(false);
+    }
+  };
+
   const swap = () => {
     trade.measure();
     setTurns((n) => n + 1);
@@ -158,7 +179,12 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
               i === 1 && viaHouse ? (
                 <span className="label route__note">No sign-in needed. You get a public Spotify playlist link.</span>
               ) : (
-                <ConnectButton platform={p} connected={Boolean(me.connections[p])} onConnected={refresh} />
+                <ConnectButton
+                  platform={p}
+                  connected={Boolean(me.connections[p])}
+                  onConnected={refresh}
+                  label={p === "spotify" ? "Connect Spotify (testers)" : undefined}
+                />
               )
             ) : (
               <span className="route__wait label">Checking…</span>
@@ -175,11 +201,40 @@ export function SwitchView({ initialError }: { initialError: string | null }) {
         </button>
       </section>
 
-      {from === "spotify" && me && !me.connections.spotify && (
-        <p className="notice notice--quiet">Spotify sign-in is invite-only for now: it works for accounts on our tester list.</p>
+      {me && !fromOk && (
+        <section className="pick" aria-labelledby="paste-title">
+          <h2 id="paste-title">Paste a {serviceName(from)} playlist</h2>
+          <form
+            className="move-paste"
+            onSubmit={(e) => {
+              e.preventDefault();
+              movePasted();
+            }}
+          >
+            <label htmlFor="move-link" className="visually-hidden">
+              {serviceName(from)} playlist link
+            </label>
+            <input
+              id="move-link"
+              value={pasted}
+              onChange={(e) => setPasted(e.target.value)}
+              placeholder={`${serviceName(from)} playlist or album link`}
+              autoComplete="off"
+              spellCheck={false}
+              className="field field--lg"
+            />
+            <button disabled={busy || !pasted.trim()} className="btn btn--primary btn--lg">
+              <ServiceLogo platform={to} size={20} />
+              {busy ? "Starting…" : `Move to ${serviceName(to)}`}
+            </button>
+          </form>
+          <p className="label">
+            {from === "spotify"
+              ? "Public playlists only, up to 100 songs. Spotify sign-in is invite-only for now, so this is the way in."
+              : `Public playlists only. Or connect ${serviceName(from)} above to pick from your library.`}
+          </p>
+        </section>
       )}
-
-      {me && !fromOk && <p className="label">Connect {serviceName(from)} to see your playlists.</p>}
 
       {fromOk && (
         <section className="pick" aria-labelledby="pick-title">
