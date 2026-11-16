@@ -105,3 +105,7 @@ a missing song) and a separate `<db>_demo` database, so you can demo the whole f
 - **Gemini**: `GEMINI_API_KEY` from Google AI Studio. Optional.
 
 All settings are listed in [.env.example](.env.example). Deploying is in [DEPLOY.md](DEPLOY.md).
+
+## License
+
+[MIT](LICENSE)
